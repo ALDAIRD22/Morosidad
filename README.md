@@ -115,7 +115,7 @@
             </button>
         </nav>
 
-        <!-- TARJETAS DE INDICADORES GLOBALES -->
+        <!-- TARJETAS DE INDICADORES GLOBALES (CORREGIDO HTML) -->
         <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             <div class="premium-card rounded-2xl p-5 flex flex-col justify-between shadow-xl">
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">📊 Total Matriculados</p>
@@ -276,7 +276,7 @@
             <div class="premium-card rounded-2xl p-6 shadow-xl">
                 <div class="mb-5 border-b border-slate-800/80 pb-3">
                     <h3 class="text-lg font-bold text-white tracking-tight">📅 Cronograma General de Cuotas de Pagos</h3>
-                    <p class="text-xs text-slate-400 mt-1">Fechas límite estipuladas para el control de los vencimientos institucionales</p>
+                    <p class="text-xs text-slate-400 mt-1">Fechas límite estipuladas para el control de los vencimientos institucionales (L2:W12)</p>
                 </div>
                 <div class="w-full overflow-x-auto">
                     <table class="w-full text-left border-collapse text-xs">
@@ -323,6 +323,15 @@
             return cell && cell.f !== undefined && cell.f !== null ? cell.f : str;
         }
 
+        function switchTab(targetId) {
+            document.querySelectorAll('.tab-view').forEach(view => view.classList.add('hidden'));
+            document.getElementById(targetId).classList.remove('hidden');
+            document.querySelectorAll('.nav-card').forEach(btn => {
+                btn.className = "nav-card premium-card text-left rounded-2xl p-5 hover:bg-slate-800/30 hover:border-slate-700/50";
+            });
+            document.getElementById('btn-' + targetId).className = "nav-card premium-card text-left rounded-2xl p-5 border-indigo-500/40 bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-lg shadow-indigo-500/5";
+        }
+
         async function fetchSheetData(url) {
             const response = await fetch(url);
             const text = await response.text();
@@ -340,33 +349,22 @@
                 ]);
 
                 // ==========================================
-                // 1. PROCESAR TABLA DE DESERCIÓN (95% REAL)
+                // 1. PROCESAR TABLA DE DESERCIÓN PRINCIPAL (95% REAL)
                 // ==========================================
                 const rowsDes = tableDes.rows;
-                let idxCiclo = -1, idxTutor = -1, idxMat = -1, idxPag = -1, idxSus = -1, idxDes = -1, idxCum = -1, idxNot = -1;
-                let startRowDesIdx = 0;
+                let idxCiclo = 1, idxTutor = 2, idxMat = 3, idxPag = 4, idxSus = 5, idxDes = 6, idxCum = 7, idxNot = 8;
+                let startRowDesIdx = 2;
 
-                for (let i = 0; i < rowsDes.length; i++) {
+                for (let i = 0; i < Math.min(rowsDes.length, 6); i++) {
                     if (!rowsDes[i] || !rowsDes[i].c) continue;
-                    let labels = rowsDes[i].c.map(cell => safeString(cell).toUpperCase());
-                    let pos = labels.indexOf('CICLO');
+                    let textArray = rowsDes[i].c.map(cell => safeString(cell).toUpperCase());
+                    let pos = textArray.indexOf('CICLO');
                     if (pos !== -1 && pos < 3) {
-                        idxCiclo = pos;
-                        idxTutor = pos + 1;
-                        idxMat = pos + 2;
-                        idxPag = pos + 3;
-                        idxSus = pos + 4;
-                        idxDes = pos + 5;
-                        idxCum = pos + 6;
-                        idxNot = pos + 7;
+                        idxCiclo = pos; idxTutor = pos + 1; idxMat = pos + 2; idxPag = pos + 3;
+                        idxSus = pos + 4; idxDes = pos + 5; idxCum = pos + 6; idxNot = pos + 7;
                         startRowDesIdx = i + 1;
                         break;
                     }
-                }
-
-                if (idxCiclo === -1) {
-                    idxCiclo = 1; idxTutor = 2; idxMat = 3; idxPag = 4; idxSus = 5; idxDes = 6; idxCum = 7; idxNot = 8;
-                    startRowDesIdx = 2;
                 }
 
                 cachedDesercionRows = [];
@@ -435,6 +433,7 @@
                         if (overlay) {
                             overlay.classList.remove('opacity-100');
                             overlay.classList.add('opacity-0');
+                            overlay.classList.add('pointer-events-none');
                             setTimeout(() => overlay.remove(), 700);
                         }
                     }, 3500);
@@ -610,7 +609,6 @@
             document.getElementById('f-tutor-cum').innerText = Math.round(tCum) + '%';
             metricsContainer.classList.remove('hidden');
 
-            // Filtrado exacto de alumnos por tutor limpiando espacios
             let filteredStudents = moroDataCached.filter(m => m.tutor.toLowerCase().trim() === selectedTutor.toLowerCase());
             tbodyFiltered.innerHTML = '';
 
@@ -639,9 +637,6 @@
             }
         }
 
-        // ========================================================
-        // 3. CRONOGRAMA DE CUOTAS L2:W12 (TOTALMENTE OPERATIVO)
-        // ========================================================
         function renderCuotasTable(rows) {
             const thead = document.getElementById('table-head-cuotas');
             const tbody = document.getElementById('table-body-cuotas');
@@ -653,27 +648,25 @@
 
             for (let r = 0; r < rows.length; r++) {
                 if (rows[r] && rows[r].c) {
-                    for (let c = 0; c < rows[r].c.length; c++) {
-                        let txt = safeString(rows[r].c[c]).toUpperCase();
-                        if (txt === 'CUOTA') {
-                            rHead = r;
-                            cHead = c;
-                            break;
-                        }
+                    let txtArray = rows[r].c.map(cell => cell ? cell.v.toString().trim().toUpperCase() : '');
+                    let cIdx = txtArray.indexOf('CUOTA');
+                    if (cIdx !== -1) {
+                        rHead = r;
+                        cHead = cIdx;
+                        break;
                     }
                 }
-                if (rHead !== -1) break;
             }
 
             if (rHead === -1 || !rows[rHead]) return;
 
-            let headers = [];
+            let headersCount = 0;
             let rowHeader = rows[rHead];
             
             for (let c = cHead; c < rowHeader.c.length; c++) {
                 let val = safeString(rowHeader.c[c]);
                 if (!val) break; 
-                headers.push(val);
+                headersCount++;
                 const th = document.createElement('th');
                 th.className = "py-3.5 px-4 text-left font-bold text-slate-400 uppercase tracking-wider text-[10px]";
                 th.innerText = val;
@@ -692,7 +685,7 @@
                 
                 let htmlStr = `<td class="py-3 px-4 font-bold text-indigo-400">Cuota ${firstCell}</td>`;
                 
-                for (let i = 1; i < headers.length; i++) {
+                for (let i = 1; i < headersCount; i++) {
                     let cellObj = row.c[cHead + i];
                     let cellVal = safeString(cellObj);
                     htmlStr += `<td class="py-3 px-4 font-mono text-slate-300">${cellVal || '-'}</td>`;
