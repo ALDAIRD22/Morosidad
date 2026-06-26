@@ -85,7 +85,7 @@
     <!-- Alerta de Sincronización -->
     <div id="error-box" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
         <div class="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl text-sm font-medium">
-            ⚠️ Alerta de Sincronización: No se pudieron leer los datos del archivo. Verifica los permisos del enlace público de Google Sheets.
+            ⚠️ Alerta de Sincronización: No se pudieron leer los datos del archivo. Verifica los permisos de acceso en Google Sheets.
         </div>
     </div>
 
@@ -186,7 +186,7 @@
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-slate-800/80 pb-4">
                     <div>
                         <h3 class="text-lg font-bold text-white tracking-tight">👥 Estudiantes en Estado de Alerta / Deudores</h3>
-                        <p class="text-xs text-slate-400 mt-1">Lista completa procesada desde la pestaña MORO (A1:G1000)</p>
+                        <p class="text-xs text-slate-400 mt-1">Lista completa procesada en tiempo real (Pestaña MORO)</p>
                     </div>
                     <div>
                         <input type="text" id="search-moro" oninput="filterMoroTable()" placeholder="Buscar alumno o tutor..." class="bg-slate-950/60 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full md:w-64 focus:outline-none focus:border-indigo-500 transition-colors">
@@ -217,7 +217,7 @@
             <div class="premium-card rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h3 class="text-lg font-bold text-white tracking-tight">🔍 Buscador y Filtro Dinámico por Tutor</h3>
-                    <p class="text-xs text-slate-400 mt-1">Selecciona un tutor para aislar sus métricas y ver sus deudores de la hoja MORO.</p>
+                    <p class="text-xs text-slate-400 mt-1">Aisla de forma exacta las métricas y alumnos deudores desde la pestaña MORO.</p>
                 </div>
                 <div>
                     <select id="tutor-select-filter" onchange="onTutorFilterChange()" class="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full sm:w-64 focus:outline-none focus:border-indigo-500 transition-colors font-semibold">
@@ -248,7 +248,7 @@
 
             <!-- Tabla de Alumnos asignados al Tutor Filtrado -->
             <div class="premium-card rounded-2xl p-6 shadow-xl">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Alumnos con Alertas Extraídos de la hoja MORO</h3>
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Alumnos con Alertas (Pestaña MORO)</h3>
                 <div class="w-full overflow-x-auto">
                     <table class="w-full text-left border-collapse text-xs">
                         <thead>
@@ -276,7 +276,7 @@
             <div class="premium-card rounded-2xl p-6 shadow-xl">
                 <div class="mb-5 border-b border-slate-800/80 pb-3">
                     <h3 class="text-lg font-bold text-white tracking-tight">📅 Cronograma General de Cuotas de Pagos</h3>
-                    <p class="text-xs text-slate-400 mt-1">Fechas límite estipuladas para el control de los vencimientos institucionales (L2:W12)</p>
+                    <p class="text-xs text-slate-400 mt-1">Fechas límite estipuladas para el control de los vencimientos institucionales</p>
                 </div>
                 <div class="w-full overflow-x-auto">
                     <table class="w-full text-left border-collapse text-xs">
@@ -307,24 +307,20 @@
         let cachedDesercionRows = [];
         let moroDataCached = [];
 
-        function switchTab(targetId) {
-            document.querySelectorAll('.tab-view').forEach(view => view.classList.add('hidden'));
-            document.getElementById(targetId).classList.remove('hidden');
-            document.querySelectorAll('.nav-card').forEach(btn => {
-                btn.className = "nav-card premium-card text-left rounded-2xl p-5 hover:bg-slate-800/30 hover:border-slate-700/50";
-            });
-            document.getElementById('btn-' + targetId).className = "nav-card premium-card text-left rounded-2xl p-5 border-indigo-500/40 bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-lg shadow-indigo-500/5";
+        function safeString(cell) {
+            if (!cell) return '';
+            if (cell.v === null || cell.v === undefined) return '';
+            return cell.v.toString().trim();
         }
 
         function getVal(cell, isNum = false) {
-            if (!cell) return isNum ? 0 : '';
-            if (cell.v === null || cell.v === undefined) return isNum ? 0 : '';
+            let str = safeString(cell);
             if (isNum) {
-                let val = cell.v.toString().replace(/[^0-9.-]/g, '');
-                let num = parseFloat(val);
+                let clean = str.replace(/[^0-9.-]/g, '');
+                let num = parseFloat(clean);
                 return isNaN(num) ? 0 : num;
             }
-            return cell.f !== undefined && cell.f !== null ? cell.f : cell.v.toString();
+            return cell && cell.f !== undefined && cell.f !== null ? cell.f : str;
         }
 
         async function fetchSheetData(url) {
@@ -344,22 +340,33 @@
                 ]);
 
                 // ==========================================
-                // 1. PROCESAR TABLA DE DESERCIÓN PRINCIPAL (95%)
+                // 1. PROCESAR TABLA DE DESERCIÓN (95% REAL)
                 // ==========================================
                 const rowsDes = tableDes.rows;
-                let idxCiclo = 1, idxTutor = 2, idxMat = 3, idxPag = 4, idxSus = 5, idxDes = 6, idxCum = 7, idxNot = 8;
-                let startRowDesIdx = 2;
+                let idxCiclo = -1, idxTutor = -1, idxMat = -1, idxPag = -1, idxSus = -1, idxDes = -1, idxCum = -1, idxNot = -1;
+                let startRowDesIdx = 0;
 
-                for (let i = 0; i < Math.min(rowsDes.length, 6); i++) {
+                for (let i = 0; i < rowsDes.length; i++) {
                     if (!rowsDes[i] || !rowsDes[i].c) continue;
-                    let textArray = rowsDes[i].c.map(cell => cell ? getVal(cell).trim().toUpperCase() : '');
-                    let pos = textArray.indexOf('CICLO');
+                    let labels = rowsDes[i].c.map(cell => safeString(cell).toUpperCase());
+                    let pos = labels.indexOf('CICLO');
                     if (pos !== -1 && pos < 3) {
-                        idxCiclo = pos; idxTutor = pos + 1; idxMat = pos + 2; idxPag = pos + 3;
-                        idxSus = pos + 4; idxDes = pos + 5; idxCum = pos + 6; idxNot = pos + 7;
+                        idxCiclo = pos;
+                        idxTutor = pos + 1;
+                        idxMat = pos + 2;
+                        idxPag = pos + 3;
+                        idxSus = pos + 4;
+                        idxDes = pos + 5;
+                        idxCum = pos + 6;
+                        idxNot = pos + 7;
                         startRowDesIdx = i + 1;
                         break;
                     }
+                }
+
+                if (idxCiclo === -1) {
+                    idxCiclo = 1; idxTutor = 2; idxMat = 3; idxPag = 4; idxSus = 5; idxDes = 6; idxCum = 7; idxNot = 8;
+                    startRowDesIdx = 2;
                 }
 
                 cachedDesercionRows = [];
@@ -370,20 +377,19 @@
                     const row = rowsDes[i];
                     if (!row || !row.c) continue;
 
-                    let bVal = row.c[idxCiclo] ? getVal(row.c[idxCiclo]).trim() : '';
+                    let bVal = safeString(row.c[idxCiclo]);
 
                     if (bVal.toUpperCase() === 'CICLO') {
                         desDataStarted = true;
                         continue;
                     }
 
-                    if (desDataStarted) {
+                    if (i === startRowDesIdx || desDataStarted || bVal !== '') {
                         if (bVal.toUpperCase().includes('TOTAL')) {
                             totalMat = getVal(row.c[idxMat], true);
                             totalPag = getVal(row.c[idxPag], true);
                             totalDes = getVal(row.c[idxSus], true);
-                            let cumText = getVal(row.c[idxCum]).toString();
-                            totalCum = parseFloat(cumText) || (totalMat > 0 ? (totalPag / totalMat) * 100 : 0);
+                            totalCum = getVal(row.c[idxCum], true);
                             break; 
                         }
 
@@ -391,23 +397,25 @@
 
                         cachedDesercionRows.push({
                             ciclo: bVal,
-                            tutor: row.c[idxTutor] ? getVal(row.c[idxTutor]).trim() : '',
+                            tutor: safeString(row.c[idxTutor]),
                             matriculados: getVal(row.c[idxMat], true),
                             pagantes: getVal(row.c[idxPag], true),
                             suspendidos: getVal(row.c[idxSus], true),
-                            desercion: row.c[idxDes] ? getVal(row.c[idxDes]).trim() : '0%',
-                            cumplimiento: row.c[idxCum] ? getVal(row.c[idxCum]).trim() : '100%',
-                            nota: row.c[idxNot] ? getVal(row.c[idxNot]).trim() : ''
+                            desercion: safeString(row.c[idxDes]) || '0%',
+                            cumplimiento: safeString(row.c[idxCum]) || '100%',
+                            nota: safeString(row.c[idxNot])
                         });
                     }
                 }
 
-                // Renderizar KPI Globales exactos (95%)
+                // Renderizar KPI Globales exactos de la hoja (95%)
                 document.getElementById('lbl-total-mat').innerText = Math.round(totalMat);
                 document.getElementById('lbl-total-pag').innerText = Math.round(totalPag);
                 document.getElementById('lbl-total-des').innerText = Math.round(totalDes);
                 
                 let complianceNum = totalCum <= 1 ? totalCum * 100 : totalCum;
+                if(complianceNum === 0 && totalMat > 0) complianceNum = (totalPag / totalMat) * 100;
+                
                 document.getElementById('lbl-total-cum').innerText = Math.round(complianceNum) + '%';
                 document.getElementById('bar-cum-global').style.width = Math.round(complianceNum) + '%';
 
@@ -437,15 +445,15 @@
                 renderCuotasTable(rowsDes);
 
                 // ==========================================
-                // 2. PROCESAR PESTAÑA MORO (A1:G1000 DINÁMICO COMPLETAMENTE)
+                // 2. PROCESAR PESTAÑA MORO (A1:G1000 COMPLETO)
                 // ==========================================
                 const rowsMoro = tableMoro.rows;
                 let idxMoroNum = 0, idxMoroDni = 1, idxMoroAlumno = 2, idxMoroCorte = 3, idxMoroTutor = 4, idxMoroCondicion = 5, idxMoroMotivos = 6;
                 let startRowMoroIdx = 1;
 
-                for (let i = 0; i < Math.min(rowsMoro.length, 5); i++) {
+                for (let i = 0; i < Math.min(rowsMoro.length, 6); i++) {
                     if (!rowsMoro[i] || !rowsMoro[i].c) continue;
-                    let labels = rowsMoro[i].c.map(cell => cell ? getVal(cell).trim().toUpperCase() : '');
+                    let labels = rowsMoro[i].c.map(cell => safeString(cell).toUpperCase());
                     if (labels.includes('DNI') || labels.includes('ALUMNO')) {
                         idxMoroDni = labels.indexOf('DNI') !== -1 ? labels.indexOf('DNI') : 1;
                         idxMoroAlumno = labels.indexOf('ALUMNO') !== -1 ? labels.indexOf('ALUMNO') : 2;
@@ -465,27 +473,23 @@
                     const row = rowsMoro[j];
                     if(!row || !row.c) continue;
 
-                    let cellDni = row.c[idxMoroDni] ? getVal(row.c[idxMoroDni]).trim() : '';
-                    let cellAlumno = row.c[idxMoroAlumno] ? getVal(row.c[idxMoroAlumno]).trim() : '';
+                    let cellDni = safeString(row.c[idxMoroDni]);
+                    let cellAlumno = safeString(row.c[idxMoroAlumno]);
                     
                     if(cellDni.toUpperCase() === 'DNI' || cellAlumno.toUpperCase() === 'ALUMNO') continue;
                     if(!cellDni && !cellAlumno) continue; 
 
                     moroDataCached.push({
-                        num: row.c[idxMoroNum] ? getVal(row.c[idxMoroNum]).trim() : (moroDataCached.length + 1),
+                        num: row.c[idxMoroNum] ? safeString(row.c[idxMoroNum]) : (moroDataCached.length + 1),
                         dni: cellDni,
                         alumno: cellAlumno,
-                        corte: row.c[idxMoroCorte] ? getVal(row.c[idxMoroCorte]).trim() : '',
-                        tutor: row.c[idxMoroTutor] ? getVal(row.c[idxMoroTutor]).trim() : '',
-                        condicion: row.c[idxMoroCondicion] ? getVal(row.c[idxMoroCondicion]).trim() : '',
-                        motivos: row.c[idxMoroMotivos] ? getVal(row.c[idxMoroMotivos]).trim() : ''
+                        corte: safeString(row.c[idxMoroCorte]),
+                        tutor: safeString(row.c[idxMoroTutor]),
+                        condicion: safeString(row.c[idxMoroCondicion]),
+                        motivos: safeString(row.c[idxMoroMotivos])
                     });
                 }
                 renderMoroTable(moroDataCached);
-
-                // ==========================================
-                // 3. ENLAZAR DESPLEGABLE DE TUTORES DE MORO
-                // ==========================================
                 populateTutorDropdown();
                 renderCharts(cachedDesercionRows, complianceNum);
                 document.getElementById('error-box').className = 'hidden';
@@ -544,7 +548,7 @@
         }
 
         function filterMoroTable() {
-            const query = document.getElementById('search-moro').value.toLowerCase();
+            const query = document.getElementById('search-moro').value.toLowerCase().trim();
             const filtered = moroDataCached.filter(item => 
                 item.alumno.toLowerCase().includes(query) || 
                 item.tutor.toLowerCase().includes(query) ||
@@ -553,7 +557,6 @@
             renderMoroTable(filtered);
         }
 
-        // SE RECONECTÓ EL FILTRO DE TUTORES CON LA PESTAÑA MORO EXCLUSIVAMENTE
         function populateTutorDropdown() {
             const select = document.getElementById('tutor-select-filter');
             const currentSelection = select.value;
@@ -580,7 +583,7 @@
         }
 
         function onTutorFilterChange() {
-            const selectedTutor = document.getElementById('tutor-select-filter').value;
+            const selectedTutor = document.getElementById('tutor-select-filter').value.trim();
             const metricsContainer = document.getElementById('tutor-filtered-metrics');
             const tbodyFiltered = document.getElementById('table-body-tutor-filtered');
 
@@ -591,7 +594,7 @@
             }
 
             let tMat = 0, tPag = 0, tDes = 0;
-            let tutorRows = cachedDesercionRows.filter(r => r.tutor.toLowerCase() === selectedTutor.toLowerCase());
+            let tutorRows = cachedDesercionRows.filter(r => r.tutor.toLowerCase().trim() === selectedTutor.toLowerCase());
             
             tutorRows.forEach(r => {
                 tMat += r.matriculados;
@@ -607,8 +610,8 @@
             document.getElementById('f-tutor-cum').innerText = Math.round(tCum) + '%';
             metricsContainer.classList.remove('hidden');
 
-            // Extracción exacta de las 4 filas de Lesly y 5 de Rodrigo directamente desde MORO cached
-            let filteredStudents = moroDataCached.filter(m => m.tutor.toLowerCase() === selectedTutor.toLowerCase());
+            // Filtrado exacto de alumnos por tutor limpiando espacios
+            let filteredStudents = moroDataCached.filter(m => m.tutor.toLowerCase().trim() === selectedTutor.toLowerCase());
             tbodyFiltered.innerHTML = '';
 
             if(filteredStudents.length === 0) {
@@ -636,9 +639,9 @@
             }
         }
 
-        // ==========================================
-        // 4. CONTROLADOR CRONOGRAMA CORREGIDO (L2:W12)
-        // ==========================================
+        // ========================================================
+        // 3. CRONOGRAMA DE CUOTAS L2:W12 (TOTALMENTE OPERATIVO)
+        // ========================================================
         function renderCuotasTable(rows) {
             const thead = document.getElementById('table-head-cuotas');
             const tbody = document.getElementById('table-body-cuotas');
@@ -648,17 +651,14 @@
             let rHead = -1;
             let cHead = -1;
 
-            // Localizar coordenadas seguras por texto
             for (let r = 0; r < rows.length; r++) {
                 if (rows[r] && rows[r].c) {
                     for (let c = 0; c < rows[r].c.length; c++) {
-                        if (rows[r].c[c] && rows[r].c[c].v) {
-                            let txt = rows[r].c[c].v.toString().trim().toUpperCase();
-                            if (txt === 'CUOTA') {
-                                rHead = r;
-                                cHead = c;
-                                break;
-                            }
+                        let txt = safeString(rows[r].c[c]).toUpperCase();
+                        if (txt === 'CUOTA') {
+                            rHead = r;
+                            cHead = c;
+                            break;
                         }
                     }
                 }
@@ -671,8 +671,7 @@
             let rowHeader = rows[rHead];
             
             for (let c = cHead; c < rowHeader.c.length; c++) {
-                if(!rowHeader.c[c]) break;
-                let val = getVal(rowHeader.c[c]).trim();
+                let val = safeString(rowHeader.c[c]);
                 if (!val) break; 
                 headers.push(val);
                 const th = document.createElement('th');
@@ -685,7 +684,7 @@
                 let row = rows[r];
                 if (!row || !row.c) continue;
                 
-                let firstCell = row.c[cHead] ? getVal(row.c[cHead]).trim() : '';
+                let firstCell = safeString(row.c[cHead]);
                 if (!firstCell || isNaN(firstCell)) continue;
 
                 const tr = document.createElement('tr');
@@ -695,7 +694,7 @@
                 
                 for (let i = 1; i < headers.length; i++) {
                     let cellObj = row.c[cHead + i];
-                    let cellVal = cellObj ? getVal(cellObj).trim() : '-';
+                    let cellVal = safeString(cellObj);
                     htmlStr += `<td class="py-3 px-4 font-mono text-slate-300">${cellVal || '-'}</td>`;
                 }
                 tr.innerHTML = htmlStr;
