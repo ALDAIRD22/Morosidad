@@ -115,7 +115,7 @@
             </button>
         </nav>
 
-        <!-- TARJETAS DE INDICADORES GLOBALES -->
+        <!-- TARJETAS DE INDICADORES GLOBALES (SIN DECIMALES) -->
         <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             <div class="premium-card rounded-2xl p-5 flex flex-col justify-between shadow-xl">
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">📊 Total Matriculados</p>
@@ -320,10 +320,7 @@
             if (!cell) return isNum ? 0 : '';
             if (cell.v === null || cell.v === undefined) return isNum ? 0 : '';
             if (isNum) {
-                let val = cell.v;
-                if (typeof val === 'string') {
-                    val = val.replace(/[^0-9.-]/g, '');
-                }
+                let val = cell.v.toString().replace(/[^0-9.-]/g, '');
                 let num = parseFloat(val);
                 return isNaN(num) ? 0 : num;
             }
@@ -347,35 +344,29 @@
                 ]);
 
                 // ==========================================
-                // 1. ESCÁNER INTELIGENTE DE COLUMNAS (DES)
+                // 1. PROCESAR TABLA DE DESERCIÓN PRINCIPAL (BLOQUE IZQUIERDO)
                 // ==========================================
                 const rowsDes = tableDes.rows;
                 let idxCiclo = -1, idxTutor = -1, idxMat = -1, idxPag = -1, idxSus = -1, idxDes = -1, idxCum = -1, idxNot = -1;
                 let startRowDesIdx = 0;
 
-                // Buscamos la fila que contiene la cabecera real por su texto clave
+                // Buscamos estrictamente la primera cabecera de la izquierda
                 for (let i = 0; i < rowsDes.length; i++) {
                     if (!rowsDes[i] || !rowsDes[i].c) continue;
                     let textArray = rowsDes[i].c.map(cell => cell ? getVal(cell).trim().toUpperCase() : '');
                     let pos = textArray.indexOf('CICLO');
-                    if (pos !== -1) {
+                    if (pos !== -1 && pos < 3) { // Forzar que sea la tabla izquierda (B2)
                         idxCiclo = pos;
                         idxTutor = pos + 1;
-                        idxMat = textArray.indexOf('MAT') !== -1 ? textArray.indexOf('MAT') : pos + 2;
-                        idxPag = textArray.indexOf('PAG') !== -1 ? textArray.indexOf('PAG') : pos + 3;
-                        idxSus = textArray.indexOf('SUS') !== -1 ? textArray.indexOf('SUS') : pos + 4;
-                        idxDes = textArray.indexOf('DES') !== -1 ? textArray.indexOf('DES') : pos + 5;
-                        idxCum = textArray.indexOf('CUM') !== -1 ? textArray.indexOf('CUM') : pos + 6;
-                        idxNot = textArray.indexOf('NOT') !== -1 ? textArray.indexOf('NOT') : pos + 7;
+                        idxMat = pos + 2;
+                        idxPag = pos + 3;
+                        idxSus = pos + 4;
+                        idxDes = pos + 5;
+                        idxCum = pos + 6;
+                        idxNot = pos + 7;
                         startRowDesIdx = i + 1;
-                        break;
+                        break; // DETENER BUSCADOR PARA EVITAR INTERFERENCIA DE OTRAS TABLAS
                     }
-                }
-
-                // Respaldo de seguridad estricto por si las cabeceras vienen alteradas
-                if (idxCiclo === -1) {
-                    idxCiclo = 1; idxTutor = 2; idxMat = 3; idxPag = 4; idxSus = 5; idxDes = 6; idxCum = 7; idxNot = 8;
-                    startRowDesIdx = 2;
                 }
 
                 cachedDesercionRows = [];
@@ -387,11 +378,13 @@
                     if (!row || !row.c || row.c[idxCiclo] === null || row.c[idxCiclo] === undefined) continue;
 
                     let cicloName = getVal(row.c[idxCiclo]).trim();
+                    
+                    // Al encontrar el TOTAL de la fila 19, extraemos y rompemos la lectura fulminantemente
                     if (cicloName.toUpperCase() === 'TOTAL' || cicloName.toUpperCase() === 'TOTALES') {
                         totalMat = getVal(row.c[idxMat], true);
                         totalPag = getVal(row.c[idxPag], true);
                         totalDes = getVal(row.c[idxSus], true);
-                        let cumText = getVal(row.c[idxCum]);
+                        let cumText = getVal(row.c[idxCum]).toString();
                         totalCum = parseFloat(cumText) || (totalMat > 0 ? (totalPag / totalMat) * 100 : 0);
                         break; 
                     }
@@ -404,13 +397,13 @@
                         matriculados: getVal(row.c[idxMat], true),
                         pagantes: getVal(row.c[idxPag], true),
                         suspendidos: getVal(row.c[idxSus], true),
-                        desercion: row.c[idxDes] ? getVal(row.c[idxDes]).trim() : '',
-                        cumplimiento: row.c[idxCum] ? getVal(row.c[idxCum]).trim() : '',
+                        desercion: row.c[idxDes] ? getVal(row.c[idxDes]).trim() : '0%',
+                        cumplimiento: row.c[idxCum] ? getVal(row.c[idxCum]).trim() : '100%',
                         nota: row.c[idxNot] ? getVal(row.c[idxNot]).trim() : ''
                     });
                 }
 
-                // Renderizar KPI Globales
+                // Renderizar KPI Globales exactos de la hoja (95%)
                 document.getElementById('lbl-total-mat').innerText = Math.round(totalMat);
                 document.getElementById('lbl-total-pag').innerText = Math.round(totalPag);
                 document.getElementById('lbl-total-des').innerText = Math.round(totalDes);
@@ -445,7 +438,7 @@
                 renderCuotasTable(rowsDes);
 
                 // ==========================================
-                // 2. ESCÁNER INTELIGENTE DE COLUMNAS (MORO)
+                // 2. PROCESAR PESTAÑA MORO
                 // ==========================================
                 const rowsMoro = tableMoro.rows;
                 let idxMoroNum = 0, idxMoroDni = 1, idxMoroAlumno = 2, idxMoroCorte = 3, idxMoroTutor = 4, idxMoroCondicion = 5, idxMoroMotivos = 6;
@@ -636,7 +629,9 @@
             }
         }
 
-        // CONTROLADOR DE EXTRACCIÓN AUTOMÁTICA DEL CRONOGRAMA DE CUOTAS
+        // ==========================================
+        // 3. PROCESAR CRONOGRAMA DE PAGOS AUTOMÁTICO (L2:W12)
+        // ==========================================
         function renderCuotasTable(rows) {
             const thead = document.getElementById('table-head-cuotas');
             const tbody = document.getElementById('table-body-cuotas');
@@ -646,21 +641,17 @@
             let rHead = -1;
             let cHead = -1;
 
-            // Escaneamos la matriz completa para localizar la subtabla del cronograma
+            // Escaneo dinámico horizontal para ubicar la palabra exacta CUOTA sin importar desfases
             for (let r = 0; r < rows.length; r++) {
                 if (rows[r] && rows[r].c) {
-                    for (let c = 0; c < rows[r].c.length; c++) {
-                        if (rows[r].c[c]) {
-                            let txt = getVal(rows[r].c[c]).trim().toUpperCase();
-                            if (txt === 'CUOTA' || txt.includes('CUOTAS DE PAGOS')) {
-                                rHead = txt.includes('CUOTAS DE PAGOS') ? r + 1 : r;
-                                cHead = c;
-                                break;
-                            }
-                        }
+                    let txtArray = rows[r].c.map(cell => cell ? cell.v.toString().trim().toUpperCase() : '');
+                    let cIdx = txtArray.indexOf('CUOTA');
+                    if (cIdx !== -1) {
+                        rHead = r;
+                        cHead = cIdx;
+                        break;
                     }
                 }
-                if (rHead !== -1) break;
             }
 
             if (rHead === -1 || !rows[rHead]) return;
@@ -668,7 +659,6 @@
             let headersCount = 0;
             let rowHeader = rows[rHead];
             
-            // Generar cabecera dinámica de las cuotas
             for (let c = cHead; c < rowHeader.c.length; c++) {
                 let val = rowHeader.c[c] ? getVal(rowHeader.c[c]).trim() : '';
                 if (!val) break; 
@@ -679,7 +669,6 @@
                 thead.appendChild(th);
             }
 
-            // Inyectar registros correspondientes a las cuotas
             for (let r = rHead + 1; r < rows.length; r++) {
                 let row = rows[r];
                 if (!row || !row.c) continue;
