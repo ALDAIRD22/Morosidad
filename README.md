@@ -186,7 +186,7 @@
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-slate-800/80 pb-4">
                     <div>
                         <h3 class="text-lg font-bold text-white tracking-tight">👥 Estudiantes en Estado de Alerta / Deudores</h3>
-                        <p class="text-xs text-slate-400 mt-1">Control integral de alumnos en riesgo de pago</p>
+                        <p class="text-xs text-slate-400 mt-1">Control de alumnos morosos y condiciones comerciales</p>
                     </div>
                     <div>
                         <input type="text" id="search-moro" oninput="filterMoroTable()" placeholder="Buscar alumno o tutor..." class="bg-slate-950/60 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full md:w-64 focus:outline-none focus:border-indigo-500 transition-colors">
@@ -217,7 +217,7 @@
             <div class="premium-card rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h3 class="text-lg font-bold text-white tracking-tight">🔍 Buscador y Filtro Dinámico por Tutor</h3>
-                    <p class="text-xs text-slate-400 mt-1">Aisla de forma exacta las métricas y alumnos deudores de la pestaña MORO.</p>
+                    <p class="text-xs text-slate-400 mt-1">Aisla las métricas y los alumnos deudores de forma instantánea.</p>
                 </div>
                 <div>
                     <select id="tutor-select-filter" onchange="onTutorFilterChange()" class="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full sm:w-64 focus:outline-none focus:border-indigo-500 transition-colors font-semibold">
@@ -316,7 +316,7 @@
                 let num = parseFloat(clean);
                 return isNaN(num) ? 0 : num;
             }
-            return cell && cell.f !== undefined && cell.f !== null ? cell.f : str;
+            return str;
         }
 
         function safePercent(cell) {
@@ -325,7 +325,7 @@
             if (cell.v !== null && cell.v !== undefined) {
                 let num = parseFloat(cell.v);
                 if (!isNaN(num)) {
-                    if (num > -1 && num <= 1) {
+                    if (num >= -1 && num <= 1) {
                         return (num * 100).toFixed(1) + '%';
                     }
                     return num.toFixed(1) + '%';
@@ -357,88 +357,69 @@
                 const tableData = await fetchSheetData(SHEET_JSON_URL);
                 const rows = tableData.rows;
 
-                // COORDENADAS ABSOLUTAS SEGURAS SOBRE TU HOJA UNIFICADA
-                let idxCiclo = 1, idxTutor = 2, idxMat = 3, idxPag = 4, idxSus = 5, idxDes = 6, idxCum = 7, idxNot = 8;
-                let idxMoroNum = 24, idxMoroDni = 25, idxMoroAlumno = 26, idxMoroCorte = 27, idxMoroTutor = 28, idxMoroCond = 29, idxMoroMotiv = 30;
-
                 cachedDesercionRows = [];
                 moroDataCached = [];
-                let cuotasHeaders = [];
+                let cuotasHeaders = ["CUOTA", "SAN ENE", "SAN MAR", "INT MAR", "SAN ABR", "INT ABR", "MATE 0", "ESC", "SAN MAY", "INT MAY"];
                 let cuotasBodyRows = [];
 
                 let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 95;
                 let desDataStarted = false;
 
-                // Capturar cabeceras de cuotas fijas de la Fila 4 (M4:V4) de forma exacta
-                if (rows[3] && rows[3].c) {
-                    for (let c = 12; c <= 21; c++) {
-                        let hVal = safeString(rows[3].c[c]);
-                        if (hVal) cuotasHeaders.push(hVal);
-                    }
-                }
-
-                // EXTRACCIÓN MAESTRA MATRICIAL EN UN SOLO BLOQUE
-                for (let i = 0; i < rows.length; i++) {
+                for (let i = 2; i < rows.length; i++) {
                     const row = rows[i];
                     if (!row || !row.c) continue;
 
-                    // 1. Extracción de Deserción por Ciclo (B3:J15)
-                    let cicloVal = safeString(row.c[idxCiclo]);
-                    if (cicloVal.toUpperCase() === 'CICLO') {
-                        desDataStarted = true;
-                        continue;
-                    }
-                    if (desDataStarted) {
-                        if (cicloVal.toUpperCase().includes('TOTAL')) {
-                            totalMat = getVal(row.c[idxMat], true);
-                            totalPag = getVal(row.c[idxPag], true);
-                            totalDes = getVal(row.c[idxSus], true);
-                            if (row.c[idxCum]) {
-                                let v = row.c[idxCum].v;
-                                totalCum = (typeof v === 'number' && v <= 1) ? v * 100 : parseFloat(v) || 95;
-                            }
-                            desDataStarted = false; 
-                        } else if (cicloVal !== '' && !cicloVal.toUpperCase().includes('VENCIMIENTO')) {
+                    // 1. EXTRAER TABLA DE DESERCIÓN (B3:J15)
+                    let cicloVal = row.c[2] ? getVal(row.c[2]) : '';
+                    if (cicloVal) {
+                        if (cicloVal.toUpperCase() === 'TOTAL' || cicloVal.toUpperCase() === 'TOTALES') {
+                            totalMat = getVal(row.c[4], true);
+                            totalPag = getVal(row.c[5], true);
+                            totalDes = getVal(row.c[6], true);
+                            let tc = getVal(row.c[8], true);
+                            totalCum = (tc <= 1 && tc > 0) ? tc * 100 : tc || 95;
+                        } else if (!cicloVal.toUpperCase().includes('VENCIMIENTO') && !cicloVal.toUpperCase().includes('CICLO')) {
                             cachedDesercionRows.push({
                                 ciclo: cicloVal,
-                                tutor: safeString(row.c[idxTutor]),
-                                matriculados: getVal(row.c[idxMat], true),
-                                pagantes: getVal(row.c[idxPag], true),
-                                suspendidos: getVal(row.c[idxSus], true),
-                                desercion: safePercent(row.c[idxDes]),
-                                cumplimiento: safePercent(row.c[idxCum]),
-                                nota: safeString(row.c[idxNot])
+                                tutor: row.c[3] ? getVal(row.c[3]) : '',
+                                matriculados: getVal(row.c[4], true),
+                                pagantes: getVal(row.c[5], true),
+                                suspendidos: getVal(row.c[6], true),
+                                desercion: safePercent(row.c[7]),
+                                cumplimiento: safePercent(row.c[8]),
+                                nota: row.c[9] ? getVal(row.c[9]) : ''
                             });
                         }
                     }
 
-                    // 2. Extracción de Morosidad (Y3:AE11)
-                    let moroDniVal = safeString(row.c[idxMoroDni]); 
-                    let moroAlumnoVal = safeString(row.c[idxMoroAlumno]); 
-                    if (moroDniVal && moroDniVal.toUpperCase() !== 'DNI' && moroAlumnoVal) {
+                    // 2. EXTRAER MOROSIDAD COMPLETA (Y3:AE1000)
+                    let mDni = row.c[25] ? getVal(row.c[25]) : '';
+                    let mAlum = row.c[26] ? getVal(row.c[26]) : '';
+                    if (mDni && mDni.toUpperCase() !== 'DNI' && mAlum && mAlum.toUpperCase() !== 'ALUMNO') {
                         moroDataCached.push({
-                            num: row.c[idxMoroNum] ? safeString(row.c[idxMoroNum]) : (moroDataCached.length + 1),
-                            dni: moroDniVal,
-                            alumno: moroAlumnoVal,
-                            corte: safeString(row.c[idxMoroCorte]),
-                            tutor: safeString(row.c[idxMoroTutor]),
-                            condicion: safeString(row.c[idxMoroCond]),
-                            motivos: safeString(row.c[idxMoroMotiv])
+                            num: row.c[24] ? getVal(row.c[24]) : (moroDataCached.length + 1),
+                            dni: mDni,
+                            alumno: mAlum,
+                            corte: row.c[27] ? getVal(row.c[27]) : '',
+                            tutor: row.c[28] ? getVal(row.c[28]) : '',
+                            condicion: row.c[29] ? getVal(row.c[29]) : '',
+                            motivos: row.c[30] ? getVal(row.c[30]) : ''
                         });
                     }
 
-                    // 3. Extracción de Cronograma de Cuotas (M5:V11)
-                    let cuotaCell = safeString(row.c[12]); 
-                    if (cuotaCell && !isNaN(cuotaCell) && cuotasHeaders.length > 0 && i >= 4) {
+                    // 3. EXTRAER CRONOGRAMA DE CUOTAS (M5:V11)
+                    let cCell = row.c[12] ? getVal(row.c[12]) : '';
+                    if (cCell && !isNaN(cCell) && i >= 4 && i <= 10) {
                         let cells = [];
-                        for (let k = 0; k < cuotasHeaders.length; k++) {
-                            cells.push(safeString(row.c[12 + k]) || '-');
+                        cells.push(cCell);
+                        for (let k = 13; k <= 21; k++) {
+                            cells.push(row.c[k] ? getVal(row.c[k]) : '-');
                         }
                         cuotasBodyRows.push(cells);
                     }
                 }
 
-                // Renderizar KPI Globales fijos sin redondeos rotos
+                // Renderizar KPI Globales
                 document.getElementById('lbl-total-mat').innerText = Math.round(totalMat);
                 document.getElementById('lbl-total-pag').innerText = Math.round(totalPag);
                 document.getElementById('lbl-total-des').innerText = Math.round(totalDes);
@@ -611,7 +592,7 @@
                         <td class="py-3 px-4 text-center">
                             <span class="px-2 py-1 rounded-md text-[10px] font-extrabold uppercase ${badgeClass}">${row.condicion}</span>
                         </td>
-                        <td class="py-3 px-4 text-slate-400 italic font-normal">${row.motivos}</td>
+                        <td class="py-3 px-4 text-slate-400 italic">${row.motivos}</td>
                     `;
                     tbodyFiltered.appendChild(tr);
                 });
