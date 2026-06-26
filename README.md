@@ -346,71 +346,53 @@
                     fetchSheetData(URL_MORO)
                 ]);
 
-                // =======================================================
-                // 1. ESCÁNER DE PESTAÑA DES (MANEJO AUTOMÁTICO DE INDICES)
-                // =======================================================
+                // ==========================================
+                // 1. PROCESAR TABLA DE DESERCIÓN (B2:I19)
+                // ==========================================
                 const rowsDes = tableDes.rows;
-                let idxCiclo = -1, idxTutor = -1, idxMat = -1, idxPag = -1, idxSus = -1, idxDes = -1, idxCum = -1, idxNot = -1;
-                let startRowDesIdx = 0;
-
-                for (let i = 0; i < Math.min(rowsDes.length, 5); i++) {
-                    const row = rowsDes[i];
-                    if (!row || !row.c) continue;
-                    let labels = row.c.map(cell => cell ? getVal(cell).trim().toUpperCase() : '');
-                    let cIdx = labels.indexOf('CICLO');
-                    if (cIdx !== -1) {
-                        idxCiclo = cIdx;
-                        idxTutor = cIdx + 1;
-                        idxMat = labels.indexOf('MAT') !== -1 ? labels.indexOf('MAT') : cIdx + 2;
-                        idxPag = labels.indexOf('PAG') !== -1 ? labels.indexOf('PAG') : cIdx + 3;
-                        idxSus = labels.indexOf('SUS') !== -1 ? labels.indexOf('SUS') : cIdx + 4;
-                        idxDes = labels.indexOf('DES') !== -1 ? labels.indexOf('DES') : cIdx + 5;
-                        idxCum = labels.indexOf('CUM') !== -1 ? labels.indexOf('CUM') : cIdx + 6;
-                        idxNot = labels.indexOf('NOT') !== -1 ? labels.indexOf('NOT') : cIdx + 7;
-                        startRowDesIdx = i + 1;
-                        break;
-                    }
-                }
-
-                // Respaldo estructural absoluto si el escáner falla por celdas vacías
-                if (idxCiclo === -1) {
-                    idxCiclo = 0; idxTutor = 1; idxMat = 2; idxPag = 3; idxSus = 4; idxDes = 5; idxCum = 6; idxNot = 7;
-                    startRowDesIdx = 1;
-                }
-
+                let idxCiclo = 1, idxTutor = 2, idxMat = 3, idxPag = 4, idxSus = 5, idxDes = 6, idxCum = 7, idxNot = 8;
+                
                 cachedDesercionRows = [];
                 let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 0;
+                let desDataStarted = false;
 
-                for(let i = startRowDesIdx; i < rowsDes.length; i++) {
+                for(let i = 0; i < rowsDes.length; i++) {
                     const row = rowsDes[i];
+                    if (!row || !row.c) continue;
 
-                    if (!row || !row.c || row.c[idxCiclo] === null || row.c[idxCiclo] === undefined) continue;
+                    let bVal = row.c[1] ? getVal(row.c[1]).trim() : '';
 
-                    let cicloName = getVal(row.c[idxCiclo]).trim();
-                    if(cicloName.toUpperCase() === 'TOTAL' || cicloName.toUpperCase() === 'TOTALES') {
-                        totalMat = getVal(row.c[idxMat], true);
-                        totalPag = getVal(row.c[idxPag], true);
-                        totalDes = getVal(row.c[idxSus], true);
-                        let cumText = getVal(row.c[idxCum]);
-                        totalCum = parseFloat(cumText) || (totalMat > 0 ? (totalPag / totalMat) * 100 : 0);
-                        break; 
+                    if (bVal.toUpperCase() === 'CICLO') {
+                        desDataStarted = true;
+                        continue;
                     }
-                    
-                    if(cicloName === '' || cicloName.toUpperCase().includes("VENCIMIENTO")) continue;
 
-                    cachedDesercionRows.push({
-                        ciclo: cicloName,
-                        tutor: row.c[idxTutor] ? getVal(row.c[idxTutor]).trim() : '',
-                        matriculados: getVal(row.c[idxMat], true),
-                        pagantes: getVal(row.c[idxPag], true),
-                        suspendidos: getVal(row.c[idxSus], true),
-                        desercion: row.c[idxDes] ? getVal(row.c[idxDes]).trim() : '',
-                        cumplimiento: row.c[idxCum] ? getVal(row.c[idxCum]).trim() : '',
-                        nota: row.c[idxNot] ? getVal(row.c[idxNot]).trim() : ''
-                    });
+                    if (desDataStarted) {
+                        if (bVal.toUpperCase().includes('TOTAL')) {
+                            totalMat = getVal(row.c[3], true);
+                            totalPag = getVal(row.c[4], true);
+                            totalDes = getVal(row.c[5], true);
+                            let cumText = getVal(row.c[7]);
+                            totalCum = parseFloat(cumText) || (totalMat > 0 ? (totalPag / totalMat) * 100 : 0);
+                            break; 
+                        }
+
+                        if (bVal === '') continue;
+
+                        cachedDesercionRows.push({
+                            ciclo: bVal,
+                            tutor: row.c[2] ? getVal(row.c[2]).trim() : '',
+                            matriculados: getVal(row.c[3], true),
+                            pagantes: getVal(row.c[4], true),
+                            suspendidos: getVal(row.c[5], true),
+                            desercion: row.c[6] ? getVal(row.c[6]).trim() : '',
+                            cumplimiento: row.c[7] ? getVal(row.c[7]).trim() : '',
+                            nota: row.c[8] ? getVal(row.c[8]).trim() : ''
+                        });
+                    }
                 }
 
-                // Renderizar KPI Globales
+                // Pintar KPIs en pantalla principal
                 document.getElementById('lbl-total-mat').innerText = Math.round(totalMat);
                 document.getElementById('lbl-total-pag').innerText = Math.round(totalPag);
                 document.getElementById('lbl-total-des').innerText = Math.round(totalDes);
@@ -442,54 +424,47 @@
                 }
 
                 renderDesercionTable(cachedDesercionRows);
+                
+                // ==========================================
+                // 2. PROCESAR CRONOGRAMA DE CUOTAS (L2:W12)
+                // ==========================================
                 renderCuotasTable(rowsDes);
 
-                // =======================================================
-                // 2. ESCÁNER DE PESTAÑA MORO (MANEJO AUTOMÁTICO DE INDICES)
-                // =======================================================
+                // ==========================================
+                // 3. PROCESAR PESTAÑA MORO (A2:G100)
+                // ==========================================
                 const rowsMoro = tableMoro.rows;
-                let idxMoroNum = 0, idxMoroDni = 1, idxMoroAlumno = 2, idxMoroCorte = 3, idxMoroTutor = 4, idxMoroCondicion = 5, idxMoroMotivos = 6;
-                let startRowMoroIdx = 1;
-
-                for (let i = 0; i < Math.min(rowsMoro.length, 5); i++) {
-                    const row = rowsMoro[i];
-                    if (!row || !row.c) continue;
-                    let labels = row.c.map(cell => cell ? getVal(cell).trim().toUpperCase() : '');
-                    if (labels.includes('DNI') || labels.includes('ALUMNO')) {
-                        idxMoroDni = labels.indexOf('DNI');
-                        idxMoroAlumno = labels.indexOf('ALUMNO');
-                        idxMoroCorte = labels.indexOf('CORTE');
-                        idxMoroTutor = labels.indexOf('TUTOR');
-                        idxMoroCondicion = labels.findIndex(v => v.includes('CONDI') || v.includes('PAGO'));
-                        idxMoroMotivos = labels.indexOf('MOTIVOS');
-                        idxMoroNum = labels.indexOf('#') !== -1 ? labels.indexOf('#') : 0;
-                        startRowMoroIdx = i + 1;
-                        break;
-                    }
-                }
-
                 moroDataCached = [];
-                for(let j = startRowMoroIdx; j < rowsMoro.length; j++) {
+                let moroDataStarted = false;
+
+                for(let j = 0; j < rowsMoro.length; j++) {
                     const row = rowsMoro[j];
                     if(!row || !row.c) continue;
 
-                    let sName = row.c[idxMoroAlumno] ? getVal(row.c[idxMoroAlumno]).trim() : '';
-                    let sDni = row.c[idxMoroDni] ? getVal(row.c[idxMoroDni]).trim() : '';
-                    if(!sName && !sDni) continue;
+                    let cellDni = row.c[1] ? getVal(row.c[1]).trim() : '';
+                    let cellAlumno = row.c[2] ? getVal(row.c[2]).trim() : '';
 
-                    moroDataCached.push({
-                        num: row.c[idxMoroNum] ? getVal(row.c[idxMoroNum]).trim() : j,
-                        dni: sDni,
-                        alumno: sName,
-                        corte: row.c[idxMoroCorte] ? getVal(row.c[idxMoroCorte]).trim() : '',
-                        tutor: row.c[idxMoroTutor] ? getVal(row.c[idxMoroTutor]).trim() : '',
-                        condicion: row.c[idxMoroCondicion] ? getVal(row.c[idxMoroCondicion]).trim() : '',
-                        motivos: row.c[idxMoroMotivos] ? getVal(row.c[idxMoroMotivos]).trim() : ''
-                    });
+                    if(cellDni.toUpperCase() === 'DNI' || cellAlumno.toUpperCase() === 'ALUMNO') {
+                        moroDataStarted = true;
+                        continue;
+                    }
+
+                    if(moroDataStarted) {
+                        if(!cellDni && !cellAlumno) continue;
+
+                        moroDataCached.push({
+                            num: row.c[0] ? getVal(row.c[0]).trim() : '',
+                            dni: cellDni,
+                            alumno: cellAlumno,
+                            corte: row.c[3] ? getVal(row.c[3]).trim() : '',
+                            tutor: row.c[4] ? getVal(row.c[4]).trim() : '',
+                            condicion: row.c[5] ? getVal(row.c[5]).trim() : '',
+                            motivos: row.c[6] ? getVal(row.c[6]).trim() : ''
+                        });
+                    }
                 }
                 renderMoroTable(moroDataCached);
 
-                // 3. ACTUALIZAR DESPLEGABLE Y GRÁFICOS
                 populateTutorDropdown();
                 renderCharts(cachedDesercionRows, complianceNum);
                 document.getElementById('error-box').className = 'hidden';
@@ -593,7 +568,6 @@
                 return;
             }
 
-            // 1. Métricas del tutor filtrado
             let tMat = 0, tPag = 0, tDes = 0;
             let tutorRows = cachedDesercionRows.filter(r => r.tutor.toLowerCase() === selectedTutor.toLowerCase());
             
@@ -611,7 +585,6 @@
             document.getElementById('f-tutor-cum').innerText = Math.round(tCum) + '%';
             metricsContainer.classList.remove('hidden');
 
-            // 2. Alumnos deudores asignados al tutor
             let filteredStudents = moroDataCached.filter(m => m.tutor.toLowerCase() === selectedTutor.toLowerCase());
             tbodyFiltered.innerHTML = '';
 
@@ -640,62 +613,65 @@
             }
         }
 
+        // FUNCIÓN TOTALMENTE REESCRITA PARA EL CRONOGRAMA DE CUOTAS L2:W12
         function renderCuotasTable(rows) {
             const thead = document.getElementById('table-head-cuotas');
             const tbody = document.getElementById('table-body-cuotas');
             thead.innerHTML = '';
             tbody.innerHTML = '';
 
-            let cuotasHeaderRowIdx = -1;
-            let idxCuotaCol = -1;
+            let rHead = -1;
+            let cHead = -1;
 
-            for(let r = 0; r < rows.length; r++) {
-                if(rows[r] && rows[r].c) {
-                    for(let c = 0; c < rows[r].c.length; c++) {
-                        if(rows[r].c[c] && getVal(rows[r].c[c]).trim().toUpperCase() === 'CUOTA') {
-                            cuotasHeaderRowIdx = r;
-                            idxCuotaCol = c;
-                            break;
+            // Escáner matricial inmune a desplazamientos para hallar la cabecera real
+            for (let r = 0; r < rows.length; r++) {
+                if (rows[r] && rows[r].c) {
+                    for (let c = 0; c < rows[r].c.length; c++) {
+                        if (rows[r].c[c]) {
+                            let txt = getVal(rows[r].c[c]).trim().toUpperCase();
+                            if (txt === 'CUOTA' || txt === 'CUOTAS' || txt.includes('CUOTAS DE PAGOS')) {
+                                rHead = txt.includes('CUOTAS DE PAGOS') ? r + 1 : r;
+                                cHead = c;
+                                break;
+                            }
                         }
                     }
                 }
-                if(cuotasHeaderRowIdx !== -1) break;
+                if (rHead !== -1) break;
             }
 
-            if(cuotasHeaderRowIdx === -1) return;
+            if (rHead === -1) return;
 
-            const hRow = rows[cuotasHeaderRowIdx];
-            let maxCols = hRow.c.length;
-            
-            for(let c = idxCuotaCol; c < maxCols; c++) {
-                if(!hRow.c[c]) continue;
-                let val = getVal(hRow.c[c]).trim();
-                if(!val) break;
+            // Extraer las etiquetas horizontales (Ej: CUOTA, SAN ENE, SAN MAR...)
+            let headersCount = 0;
+            let rowHeader = rows[rHead];
+            for (let c = cHead; c < rowHeader.c.length; c++) {
+                let val = rowHeader.c[c] ? getVal(rowHeader.c[c]).trim() : '';
+                if (!val) break; // Detenerse al salir de la subtabla
+                headersCount++;
                 const th = document.createElement('th');
-                th.className = "py-3.5 px-4";
+                th.className = "py-3.5 px-4 text-left font-bold text-slate-400 uppercase tracking-wider text-[10px]";
                 th.innerText = val;
                 thead.appendChild(th);
             }
 
-            for(let r = cuotasHeaderRowIdx + 1; r < rows.length; r++) {
-                const row = rows[r];
-                if(!row || !row.c || !row.c[idxCuotaCol]) break;
+            // Iterar los 7 bloques de cuotas contiguas hacia abajo
+            for (let r = rHead + 1; r < rows.length; r++) {
+                let row = rows[r];
+                if (!row || !row.c) continue;
                 
-                let cuotaNum = getVal(row.c[idxCuotaCol]).trim();
-                if(!cuotaNum || isNaN(cuotaNum)) {
-                    if(cuotaNum.toUpperCase().includes("TOTAL")) continue;
-                    break;
-                }
+                let firstCell = row.c[cHead] ? getVal(row.c[cHead]).trim() : '';
+                if (!firstCell || isNaN(firstCell)) continue; // Ignorar totales generales u hojas en blanco alternas
 
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-800/30 transition-colors border-b border-slate-800/40";
+                tr.className = "hover:bg-slate-800/30 transition-colors border-b border-slate-800/40 text-xs text-slate-300 font-semibold";
                 
-                let htmlStr = `<td class="py-3 px-4 font-bold text-indigo-400">Cuota ${cuotaNum}</td>`;
-                let headerCells = thead.querySelectorAll('th');
-                for(let i = 1; i < headerCells.length; i++) {
-                    let currentColIdx = idxCuotaCol + i;
-                    let cellVal = row.c[currentColIdx] ? getVal(row.c[currentColIdx]).trim() : '';
-                    htmlStr += `<td class="py-3 px-4 text-slate-300 font-mono">${cellVal || '-'}</td>`;
+                let htmlStr = `<td class="py-3 px-4 font-bold text-indigo-400">Cuota ${firstCell}</td>`;
+                
+                for (let i = 1; i < headersCount; i++) {
+                    let cellObj = row.c[cHead + i];
+                    let cellVal = cellObj ? getVal(cellObj).trim() : '-';
+                    htmlStr += `<td class="py-3 px-4 font-mono text-slate-300">${cellVal || '-'}</td>`;
                 }
                 tr.innerHTML = htmlStr;
                 tbody.appendChild(tr);
