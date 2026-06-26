@@ -25,7 +25,6 @@
         .nav-card {
             transition: all 0.25s ease;
         }
-        /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -92,42 +91,47 @@
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
-        <!-- MENÚ DE NAVEGACIÓN POR TARJETAS (TABS) -->
-        <nav class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <!-- MENÚ DE NAVEGACIÓN POR TARJETAS (TABS ACTUALIZADO) -->
+        <nav class="grid grid-cols-2 lg:grid-cols-4 gap-5">
             <button onclick="switchTab('view-desercion')" id="btn-view-desercion" class="nav-card premium-card text-left rounded-2xl p-5 border-indigo-500/40 bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-lg shadow-indigo-500/5">
                 <div class="text-3xl">📉</div>
                 <div class="text-sm font-bold text-white mt-3">Análisis de Deserción</div>
-                <div class="text-[11px] text-indigo-300 mt-1 font-medium">Métricas de Alumnos Retirados y Cumplimiento</div>
+                <div class="text-[11px] text-indigo-300 mt-1 font-medium">Métricas de Alumnos Retirados</div>
             </button>
             <button onclick="switchTab('view-morosidad')" id="btn-view-morosidad" class="nav-card premium-card text-left rounded-2xl p-5 hover:bg-slate-800/30 hover:border-slate-700/50">
                 <div class="text-3xl">👥</div>
                 <div class="text-sm font-bold text-slate-300 mt-3">Morosidad y Alumnos</div>
-                <div class="text-[11px] text-slate-500 mt-1 font-medium">Lista Dinámica de Alumnos y Estados de Pago</div>
+                <div class="text-[11px] text-slate-500 mt-1 font-medium">Lista General de Estados de Pago</div>
+            </button>
+            <button onclick="switchTab('view-tutor-filter')" id="btn-view-tutor-filter" class="nav-card premium-card text-left rounded-2xl p-5 hover:bg-slate-800/30 hover:border-slate-700/50">
+                <div class="text-3xl">🔍</div>
+                <div class="text-sm font-bold text-slate-300 mt-3">Filtrar por Tutor</div>
+                <div class="text-[11px] text-slate-500 mt-1 font-medium">Hoja de Transición y Búsqueda</div>
             </button>
             <button onclick="switchTab('view-cuotas')" id="btn-view-cuotas" class="nav-card premium-card text-left rounded-2xl p-5 hover:bg-slate-800/30 hover:border-slate-700/50">
                 <div class="text-3xl">📅</div>
                 <div class="text-sm font-bold text-slate-300 mt-3">Cronograma de Cuotas</div>
-                <div class="text-[11px] text-slate-500 mt-1 font-medium">Fechas de Vencimiento de Pagos</div>
+                <div class="text-[11px] text-slate-500 mt-1 font-medium">Fechas de Vencimiento</div>
             </button>
         </nav>
 
-        <!-- TARJETAS DE INDICADORES GLOBALES -->
+        <!-- TARJETAS DE INDICADORES GLOBALES (SIN DECIMALES .00) -->
         <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             <div class="premium-card rounded-2xl p-5 flex flex-col justify-between shadow-xl">
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">📊 Total Matriculados</p>
-                <h3 class="text-3xl font-extrabold text-slate-100 mt-2 tracking-tight" id="lbl-total-mat">0.00</h3>
+                <h3 class="text-3xl font-extrabold text-slate-100 mt-2 tracking-tight" id="lbl-total-mat">0</h3>
             </div>
             <div class="premium-card rounded-2xl p-5 flex flex-col justify-between shadow-xl">
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">✅ Alumnos Pagantes</p>
-                <h3 class="text-3xl font-extrabold text-emerald-400 mt-2 tracking-tight" id="lbl-total-pag">0.00</h3>
+                <h3 class="text-3xl font-extrabold text-emerald-400 mt-2 tracking-tight" id="lbl-total-pag">0</h3>
             </div>
             <div class="premium-card rounded-2xl p-5 flex flex-col justify-between shadow-xl">
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">⚠️ Total Deserción</p>
-                <h3 class="text-3xl font-extrabold text-rose-400 mt-2 tracking-tight" id="lbl-total-des">0.00</h3>
+                <h3 class="text-3xl font-extrabold text-rose-400 mt-2 tracking-tight" id="lbl-total-des">0</h3>
             </div>
             <div class="premium-card rounded-2xl p-5 flex flex-col justify-between shadow-xl">
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">📈 Cumplimiento General</p>
-                <h3 class="text-3xl font-extrabold text-indigo-400 mt-2 tracking-tight" id="lbl-total-cum">0.00%</h3>
+                <h3 class="text-3xl font-extrabold text-indigo-400 mt-2 tracking-tight" id="lbl-total-cum">0%</h3>
                 <div class="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
                     <div id="bar-cum-global" class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
                 </div>
@@ -154,7 +158,7 @@
             <!-- Tabla de Detalle de Deserción -->
             <section class="premium-card rounded-2xl overflow-hidden shadow-2xl">
                 <div class="p-5 border-b border-slate-800/80 bg-slate-950/20">
-                    <h3 class="text-base font-bold text-white tracking-tight">Detalle de Alumnos y Deserción por Ciclo (B2:I19)</h3>
+                    <h3 class="text-base font-bold text-white tracking-tight">Detalle de Alumnos y Deserción por Ciclo</h3>
                 </div>
                 <div class="w-full overflow-x-auto">
                     <table class="w-full text-left border-collapse text-xs">
@@ -166,7 +170,7 @@
                                 <th class="py-3.5 px-4 text-center">Pagantes</th>
                                 <th class="py-3.5 px-4 text-center">Suspendidos</th>
                                 <th class="py-3.5 px-4 text-center text-rose-400">Deserción (%)</th>
-                                <th class="py-3.5 px-4 class='text-center text-emerald-400'">Cumplimiento (%)</th>
+                                <th class="py-3.5 px-4 text-center text-emerald-400">Cumplimiento (%)</th>
                                 <th class="py-3.5 px-4 text-center">Nota</th>
                             </tr>
                         </thead>
@@ -181,7 +185,7 @@
             <div class="premium-card rounded-2xl p-6 shadow-xl">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-slate-800/80 pb-4">
                     <div>
-                        <h3 class="text-lg font-bold text-white tracking-tight">👥 Estudiantes en Estado de Alerta / Deudores (A2:G100)</h3>
+                        <h3 class="text-lg font-bold text-white tracking-tight">👥 Estudiantes en Estado de Alerta / Deudores</h3>
                         <p class="text-xs text-slate-400 mt-1">Lista en tiempo real procesada desde la pestaña MORO</p>
                     </div>
                     <div>
@@ -208,11 +212,69 @@
             </div>
         </div>
 
-        <!-- VISTA 3: CUOTAS -->
+        <!-- VISTA NÚMERO 3: HOJA DE TRANSICIÓN - FILTRAR POR TUTOR -->
+        <div id="view-tutor-filter" class="tab-view hidden space-y-6">
+            <div class="premium-card rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-bold text-white tracking-tight">🔍 Buscador y Filtro Dinámico por Tutor</h3>
+                    <p class="text-xs text-slate-400 mt-1">Selecciona un tutor para aislar sus métricas y su lista de alumnos deudores.</p>
+                </div>
+                <div>
+                    <select id="tutor-select-filter" onchange="onTutorFilterChange()" class="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full sm:w-64 focus:outline-none focus:border-indigo-500 transition-colors font-semibold">
+                        <option value="">-- Seleccionar Tutor --</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Contenedor de Métricas del Tutor Filtrado -->
+            <div id="tutor-filtered-metrics" class="hidden grid grid-cols-1 md:grid-cols-4 gap-5">
+                <div class="premium-card rounded-xl p-4 bg-slate-900/20">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase">Matriculados</p>
+                    <h4 class="text-2xl font-black text-slate-200 mt-1" id="f-tutor-mat">0</h4>
+                </div>
+                <div class="premium-card rounded-xl p-4 bg-slate-900/20">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase">Pagantes Activos</p>
+                    <h4 class="text-2xl font-black text-emerald-400 mt-1" id="f-tutor-pag">0</h4>
+                </div>
+                <div class="premium-card rounded-xl p-4 bg-slate-900/20">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase">Deserciones</p>
+                    <h4 class="text-2xl font-black text-rose-400 mt-1" id="f-tutor-des">0</h4>
+                </div>
+                <div class="premium-card rounded-xl p-4 bg-slate-900/20">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase">Cumplimiento</p>
+                    <h4 class="text-2xl font-black text-indigo-400 mt-1" id="f-tutor-cum">0%</h4>
+                </div>
+            </div>
+
+            <!-- Tabla de Alumnos asignados al Tutor Filtrado -->
+            <div class="premium-card rounded-2xl p-6 shadow-xl">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Alumnos con Alertas / Deudas Asociados al Tutor</h3>
+                <div class="w-full overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-950 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 text-[10px]">
+                                <th class="py-3.5 px-4">DNI</th>
+                                <th class="py-3.5 px-4">Alumno</th>
+                                <th class="py-3.5 px-4 text-center">Corte</th>
+                                <th class="py-3.5 px-4 text-center">Condición de Pago</th>
+                                <th class="py-3.5 px-4">Motivos</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/40 font-semibold text-slate-300" id="table-body-tutor-filtered">
+                            <tr>
+                                <td colspan="5" class="py-6 text-center text-slate-500 italic">Por favor, selecciona un tutor del menú desplegable superior.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA 4: CUOTAS -->
         <div id="view-cuotas" class="tab-view hidden space-y-6">
             <div class="premium-card rounded-2xl p-6 shadow-xl">
                 <div class="mb-5 border-b border-slate-800/80 pb-3">
-                    <h3 class="text-lg font-bold text-white tracking-tight">📅 Cronograma General de Cuotas de Pagos (M3:V11)</h3>
+                    <h3 class="text-lg font-bold text-white tracking-tight">📅 Cronograma General de Cuotas de Pagos</h3>
                     <p class="text-xs text-slate-400 mt-1">Fechas límite estipuladas para el control de los vencimientos institucionales</p>
                 </div>
                 <div class="w-full overflow-x-auto">
@@ -230,7 +292,6 @@
     </main>
 
     <script>
-        // Configuración de IDs de Google Sheets
         const SPREADSHEET_ID = '1iwQyWd5KQZHBtURWKIMC2MXrFSNyeSF2';
         const GID_DES = '700846667';
         const GID_MORO = '67706419';
@@ -241,6 +302,9 @@
         let chartBar = null;
         let chartPie = null;
         let isFirstLoad = true;
+        
+        // Cache Global de datos para filtros cruzados instantáneos
+        let cachedDesercionRows = [];
         let moroDataCached = [];
 
         function switchTab(targetId) {
@@ -277,18 +341,16 @@
 
         async function loadAllDashboardData() {
             try {
-                // Consultar ambas pestañas en paralelo
                 const [tableDes, tableMoro] = await Promise.all([
                     fetchSheetData(URL_DES),
                     fetchSheetData(URL_MORO)
                 ]);
 
-                // 1. PROCESAR PESTAÑA DES (Rango B2:I19 para Deserción)
+                // 1. PROCESAR PESTAÑA DES
                 const rowsDes = tableDes.rows;
-                let desercionLista = [];
+                cachedDesercionRows = [];
                 let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 0;
 
-                // Buscamos los datos de la primera tabla de deserción (filas 3 a 16 aprox)
                 for(let i = 2; i < rowsDes.length; i++) {
                     const row = rowsDes[i];
                     if (!row || !row.c || !row.c[1]) continue;
@@ -296,7 +358,6 @@
                     let cicloName = getVal(row.c[1]).trim();
                     if(cicloName === 'TOTAL' || cicloName === '') {
                         if(cicloName === 'TOTAL') {
-                            // Guardamos totales generales con formato numérico contable fijo
                             totalMat = getVal(row.c[3], true);
                             totalPag = getVal(row.c[4], true);
                             totalDes = getVal(row.c[5], true);
@@ -306,12 +367,11 @@
                         continue;
                     }
                     
-                    // Filtrar si es parte de las cabeceras de bloques alternos de abajo
                     if(cicloName.toUpperCase().includes("VENCIMIENTO")) continue;
 
-                    desercionLista.push({
+                    cachedDesercionRows.push({
                         ciclo: cicloName,
-                        tutor: getVal(row.c[2]),
+                        tutor: getVal(row.c[2]).trim(),
                         matriculados: getVal(row.c[3], true),
                         pagantes: getVal(row.c[4], true),
                         suspendidos: getVal(row.c[5], true),
@@ -321,21 +381,21 @@
                     });
                 }
 
-                // Renderizar KPI principales con decimales fijos contables .00
-                document.getElementById('lbl-total-mat').innerText = totalMat.toFixed(2);
-                document.getElementById('lbl-total-pag').innerText = totalPag.toFixed(2);
-                document.getElementById('lbl-total-des').innerText = totalDes.toFixed(2);
+                // Renderizar KPIs globales sin decimales (.00)
+                document.getElementById('lbl-total-mat').innerText = Math.round(totalMat);
+                document.getElementById('lbl-total-pag').innerText = Math.round(totalPag);
+                document.getElementById('lbl-total-des').innerText = Math.round(totalDes);
                 
                 let complianceNum = totalCum <= 1 ? totalCum * 100 : totalCum;
-                document.getElementById('lbl-total-cum').innerText = complianceNum.toFixed(2) + '%';
-                document.getElementById('bar-cum-global').style.width = complianceNum + '%';
+                document.getElementById('lbl-total-cum').innerText = Math.round(complianceNum) + '%';
+                document.getElementById('bar-cum-global').style.width = Math.round(complianceNum) + '%';
 
-                // Manejo de la pantalla de bienvenida basada en el porcentaje real
+                // Splash screen config
                 if (isFirstLoad) {
-                    document.getElementById('welcome-avance').innerText = complianceNum.toFixed(2) + '% Cumplimiento';
+                    document.getElementById('welcome-avance').innerText = Math.round(complianceNum) + '% Cumplimiento';
                     let faltaProgreso = 100 - complianceNum;
                     if (faltaProgreso < 0) faltaProgreso = 0;
-                    document.getElementById('welcome-falta').innerText = `Falta ${faltaProgreso.toFixed(2)}% para el óptimo`;
+                    document.getElementById('welcome-falta').innerText = `Falta ${Math.round(faltaProgreso)}% para el óptimo`;
                     
                     document.getElementById('welcome-loading').classList.add('hidden');
                     document.getElementById('welcome-stats').classList.remove('hidden');
@@ -353,34 +413,33 @@
                     isFirstLoad = false;
                 }
 
-                renderDesercionTable(desercionLista);
-
-                // 2. PROCESAR PESTAÑA DE FECHAS DE CUOTAS (Rango M3:V11)
+                renderDesercionTable(cachedDesercionRows);
                 renderCuotasTable(rowsDes);
 
-                // 3. PROCESAR PESTAÑA MORO (Alumnos Deudores/Alertas A2:G100)
+                // 2. PROCESAR PESTAÑA MORO
                 const rowsMoro = tableMoro.rows;
                 moroDataCached = [];
                 
                 for(let j = 1; j < rowsMoro.length; j++) {
                     const row = rowsMoro[j];
-                    if(!row || !row.c || !row.c[1]) continue; // Valida que exista DNI
+                    if(!row || !row.c || !row.c[1]) continue;
 
                     moroDataCached.push({
                         num: getVal(row.c[0]),
                         dni: getVal(row.c[1]),
                         alumno: getVal(row.c[2]),
                         corte: getVal(row.c[3]),
-                        tutor: getVal(row.c[4]),
+                        tutor: getVal(row.c[4]).trim(),
                         condicion: getVal(row.c[5]),
                         motivos: getVal(row.c[6])
                     });
                 }
                 renderMoroTable(moroDataCached);
 
-                // Renderizar gráficos estadísticos premium
-                renderCharts(desercionLista, complianceNum);
+                // 3. GENERAR LISTA DE TUTORES ÚNICOS PARA EL FILTRO DINÁMICO
+                populateTutorDropdown();
 
+                renderCharts(cachedDesercionRows, complianceNum);
                 document.getElementById('error-box').className = 'hidden';
 
             } catch (error) {
@@ -400,9 +459,9 @@
                 tr.innerHTML = `
                     <td class="py-3 px-4 font-bold text-slate-100 whitespace-nowrap">${row.ciclo}</td>
                     <td class="py-3 px-4 text-slate-400 font-medium">${row.tutor}</td>
-                    <td class="py-3 px-4 text-center font-bold">${row.matriculados.toFixed(2)}</td>
-                    <td class="py-3 px-4 text-center text-emerald-400 font-bold">${row.pagantes.toFixed(2)}</td>
-                    <td class="py-3 px-4 text-center text-amber-500 font-bold">${row.suspendidos.toFixed(2)}</td>
+                    <td class="py-3 px-4 text-center font-bold">${Math.round(row.matriculados)}</td>
+                    <td class="py-3 px-4 text-center text-emerald-400 font-bold">${Math.round(row.pagantes)}</td>
+                    <td class="py-3 px-4 text-center text-amber-500 font-bold">${Math.round(row.suspendidos)}</td>
                     <td class="py-3 px-4 text-center text-rose-400 font-extrabold bg-rose-500/5">${row.desercion}</td>
                     <td class="py-3 px-4 text-center text-indigo-400 font-extrabold bg-indigo-500/5">${row.cumplimiento}</td>
                     <td class="py-3 px-4 text-center text-slate-400">${row.nota}</td>
@@ -446,17 +505,97 @@
             renderMoroTable(filtered);
         }
 
+        // CONTROLADOR HOJA DE TRANSICIÓN: POPOULAR SELECTOR DE TUTORES ÚNICOS
+        function populateTutorDropdown() {
+            const select = document.getElementById('tutor-select-filter');
+            const currentSelection = select.value;
+            
+            // Obtener nombres únicos combinando ambas fuentes
+            let tutorsSet = new Set();
+            cachedDesercionRows.forEach(r => { if(r.tutor) tutorsSet.add(r.tutor); });
+            moroDataCached.forEach(m => { if(m.tutor) tutorsSet.add(m.tutor); });
+
+            // Limpiar y repopular
+            select.innerHTML = '<option value="">-- Seleccionar Tutor --</option>';
+            Array.from(tutorsSet).sort().forEach(tutorName => {
+                const opt = document.createElement('option');
+                opt.value = tutorName;
+                opt.innerText = tutorName;
+                select.appendChild(opt);
+            });
+
+            if(currentSelection && tutorsSet.has(currentSelection)) {
+                select.value = currentSelection;
+            }
+        }
+
+        // LOGICA DE FILTRADO COMPLETO POR TUTOR (TRANSICIÓN DINÁMICA)
+        function onTutorFilterChange() {
+            const selectedTutor = document.getElementById('tutor-select-filter').value;
+            const metricsContainer = document.getElementById('tutor-filtered-metrics');
+            const tbodyFiltered = document.getElementById('table-body-tutor-filtered');
+
+            if(!selectedTutor) {
+                metricsContainer.classList.add('hidden');
+                tbodyFiltered.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500 italic">Por favor, selecciona un tutor del menú desplegable superior.</td></tr>`;
+                return;
+            }
+
+            // 1. Calcular métricas resumidas aisladas del tutor elegido
+            let tMat = 0, tPag = 0, tDes = 0;
+            let tutorRows = cachedDesercionRows.filter(r => r.tutor === selectedTutor);
+            
+            tutorRows.forEach(r => {
+                tMat += r.matriculados;
+                tPag += r.pagantes;
+                tDes += r.suspendidos;
+            });
+
+            let tCum = tMat > 0 ? (tPag / tMat) * 100 : 0;
+
+            document.getElementById('f-tutor-mat').innerText = Math.round(tMat);
+            document.getElementById('f-tutor-pag').innerText = Math.round(tPag);
+            document.getElementById('f-tutor-des').innerText = Math.round(tDes);
+            document.getElementById('f-tutor-cum').innerText = Math.round(tCum) + '%';
+            metricsContainer.classList.remove('hidden');
+
+            // 2. Filtrar alumnos morosos específicos de este tutor
+            let filteredStudents = moroDataCached.filter(m => m.tutor === selectedTutor);
+            tbodyFiltered.innerHTML = '';
+
+            if(filteredStudents.length === 0) {
+                tbodyFiltered.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-emerald-400/70 font-medium bg-emerald-500/5">🎉 ¡Excelente! Este tutor no registra alumnos con deudas o alertas pendientes.</td></tr>`;
+            } else {
+                filteredStudents.forEach(row => {
+                    let badgeClass = "bg-slate-800 text-slate-300";
+                    if(row.condicion.toUpperCase().includes("VIERNES")) badgeClass = "bg-amber-500/10 text-amber-400 border border-amber-500/20";
+                    if(row.condicion.toUpperCase().includes("RETIRO")) badgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/20";
+
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-800/30 transition-colors border-b border-slate-800/40";
+                    tr.innerHTML = `
+                        <td class="py-3 px-4 font-mono text-slate-400">${row.dni}</td>
+                        <td class="py-3 px-4 font-bold text-slate-100">${row.alumno}</td>
+                        <td class="py-3 px-4 text-center text-slate-400">${row.corte}</td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="px-2 py-1 rounded-md text-[10px] font-extrabold uppercase ${badgeClass}">${row.condicion}</span>
+                        </td>
+                        <td class="py-3 px-4 text-slate-400 italic">${row.motivos}</td>
+                    `;
+                    tbodyFiltered.appendChild(tr);
+                });
+            }
+        }
+
         function renderCuotasTable(rows) {
             const thead = document.getElementById('table-head-cuotas');
             const tbody = document.getElementById('table-body-cuotas');
             thead.innerHTML = '';
             tbody.innerHTML = '';
 
-            // Fila index 3 es la cabecera del bloque M4:V11
             const headRow = rows[3];
             if(!headRow || !headRow.c) return;
 
-            // Renderizar Cabecera de columnas desde columna M (índice 12) hasta V (índice 21)
             for(let c = 12; c <= 21; c++) {
                 const th = document.createElement('th');
                 th.className = "py-3.5 px-4";
@@ -464,7 +603,6 @@
                 thead.appendChild(th);
             }
 
-            // Renderizar Filas de fechas de cuotas (filas 5 a 11 en la hoja, correspondientes a los índices 4 a 10)
             for(let r = 4; r <= 10; r++) {
                 const row = rows[r];
                 if(!row || !row.c || !row.c[12]) continue;
@@ -487,7 +625,6 @@
         }
 
         function renderCharts(data, complianceNum) {
-            // Grafica Barras: Matriculados vs Pagantes por Ciclo
             const ctxBar = document.getElementById('chartDesercionBar').getContext('2d');
             if (chartBar) chartBar.destroy();
 
@@ -523,7 +660,6 @@
                 }
             });
 
-            // Grafica Circular (Doughnut): Cumplimiento de Metas
             const ctxPie = document.getElementById('chartDesercionPie').getContext('2d');
             if (chartPie) chartPie.destroy();
 
@@ -550,7 +686,6 @@
             });
         }
 
-        // Ejecución inicial y recarga estructurada automática cada 60 segundos
         loadAllDashboardData();
         setInterval(loadAllDashboardData, 60000);
     </script>
