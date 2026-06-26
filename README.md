@@ -293,7 +293,6 @@
     </main>
 
     <script>
-        // ÚNICA URL DE CONEXIÓN AL REPOSITORIO DE DATOS UNIFICADO (TABLA DES)
         const SHEET_JSON_URL = 'https://docs.google.com/spreadsheets/d/1iwQyWd5KQZHBtURWKIMC2MXrFSNyeSF2/gviz/tq?tqx=out:json&gid=700846667';
 
         let chartBar = null;
@@ -305,8 +304,9 @@
 
         function safeString(cell) {
             if (!cell) return '';
-            if (cell.v === null || cell.v === undefined) return '';
-            return cell.v.toString().trim();
+            if (cell.f !== undefined && cell.f !== null) return cell.f.trim();
+            if (cell.v !== null && cell.v !== undefined) return cell.v.toString().trim();
+            return '';
         }
 
         function getVal(cell, isNum = false) {
@@ -319,66 +319,62 @@
             return cell && cell.f !== undefined && cell.f !== null ? cell.f : str;
         }
 
-        async function loadDashboardData() {
-            try {
-                const response = await fetch(SHEET_JSON_URL);
-                const text = await response.text();
-                const startIdx = text.indexOf('{');
-                const endIdx = text.lastIndexOf('}');
-                const jsonString = text.substring(startIdx, endIdx + 1);
-                const data = JSON.parse(jsonString);
-                const rows = data.table.rows;
+        function safePercent(cell) {
+            if (!cell) return '0%';
+            if (cell.f && cell.f.includes('%')) return cell.f.trim();
+            if (typeof cell.v === 'number') {
+                let num = cell.v;
+                if (num <= 1.0001 && num >= -0.0001) {
+                    return (num * 100).toFixed(1) + '%';
+                }
+                return num.toFixed(1) + '%';
+            }
+            let str = safeString(cell);
+            if (str.includes('%')) return str;
+            let val = parseFloat(str);
+            if (!isNaN(val)) {
+                if (val <= 1) return (val * 100).toFixed(1) + '%';
+                return val.toFixed(1) + '%';
+            }
+            return '0%';
+        }
 
-                // =========================================================
-                // ESCÁNER INTELIGENTE HORIZONTAL DE COORDENADAS (MATRICIAL)
-                // =========================================================
-                let colCiclo = 2, colTutor = 3, colMat = 4, colPag = 5, colSus = 6, colDes = 7, colCum = 8, colNot = 9;
+        function switchTab(targetId) {
+            document.querySelectorAll('.tab-view').forEach(view => view.classList.add('hidden'));
+            document.getElementById(targetId).classList.remove('hidden');
+            document.querySelectorAll('.nav-card').forEach(btn => {
+                btn.className = "nav-card premium-card text-left rounded-2xl p-5 hover:bg-slate-800/30 hover:border-slate-700/50";
+            });
+            document.getElementById('btn-' + targetId).className = "nav-card premium-card text-left rounded-2xl p-5 border-indigo-500/40 bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-lg shadow-indigo-500/5";
+        }
+
+        async function fetchSheetData(url) {
+            const response = await fetch(url);
+            const text = await response.text();
+            const startIdx = text.indexOf('{');
+            const endIdx = text.lastIndexOf('}');
+            const jsonString = text.substring(startIdx, endIdx + 1);
+            return JSON.parse(jsonString).table;
+        }
+
+        async function loadAllDashboardData() {
+            try {
+                const tableData = await fetchSheetData(SHEET_JSON_URL);
+                const rows = tableData.rows;
+
+                let colCiclo = 1, colTutor = 2, colMat = 3, colPag = 4, colSus = 5, colDes = 6, colCum = 7, colNot = 8;
                 let colCuota = 12;
                 let colMoroNum = 24, colMoroDni = 25, colMoroAlumno = 26, colMoroCorte = 27, colMoroTutor = 28, colMoroCond = 29, colMoroMotiv = 30;
 
-                for (let i = 0; i < Math.min(rows.length, 6); i++) {
-                    if (!rows[i] || !rows[i].c) continue;
-                    let tokens = rows[i].c.map(cell => safeString(cell).toUpperCase());
-                    
-                    let cicIdx = tokens.indexOf('CICLO');
-                    if (cicIdx !== -1) {
-                        colCiclo = cicIdx;
-                        colTutor = tokens.indexOf('TUTO') !== -1 ? tokens.indexOf('TUTO') : cicIdx + 1;
-                        colMat = tokens.indexOf('MAT') !== -1 ? tokens.indexOf('MAT') : cicIdx + 2;
-                        colPag = tokens.indexOf('PAG') !== -1 ? tokens.indexOf('PAG') : cicIdx + 3;
-                        colSus = tokens.indexOf('SUS') !== -1 ? tokens.indexOf('SUS') : cicIdx + 4;
-                        colDes = tokens.indexOf('DES') !== -1 ? tokens.indexOf('DES') : cicIdx + 5;
-                        colCum = tokens.indexOf('CUM') !== -1 ? tokens.indexOf('CUM') : cicIdx + 6;
-                        colNot = tokens.indexOf('NOT') !== -1 ? tokens.indexOf('NOT') : cicIdx + 7;
-                    }
-                    let qIdx = tokens.indexOf('CUOTA');
-                    if (qIdx !== -1) colCuota = qIdx;
-                    
-                    let dIdx = tokens.indexOf('DNI');
-                    if (dIdx !== -1) {
-                        colMoroDni = dIdx;
-                        colMoroNum = tokens.indexOf('#') !== -1 ? tokens.indexOf('#') : dIdx - 1;
-                        colMoroAlumno = tokens.indexOf('ALUMNO') !== -1 ? tokens.indexOf('ALUMNO') : dIdx + 1;
-                        colMoroCorte = tokens.indexOf('CORTE') !== -1 ? tokens.indexOf('CORTE') : dIdx + 2;
-                        colMoroTutor = tokens.indexOf('TUTOR') !== -1 ? tokens.indexOf('TUTOR') : dIdx + 3;
-                        let condIdx = tokens.findIndex(v => v.includes('CONDI') || v.includes('PAGO'));
-                        colMoroCond = condIdx !== -1 ? condIdx : dIdx + 4;
-                        colMoroMotiv = tokens.indexOf('MOTIVOS') !== -1 ? tokens.indexOf('MOTIVOS') : dIdx + 5;
-                    }
-                }
-
-                // =========================================================
-                // EXTRACCIÓN Y SEGREGACIÓN DE DATOS (MÉTODO EN UNA CAPA)
-                // =========================================================
                 cachedDesercionRows = [];
                 moroDataCached = [];
                 let cuotasHeaders = [];
                 let cuotasBodyRows = [];
 
-                let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 95; // 95% Real de la celda I15
+                let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 95;
                 let desDataStarted = false;
 
-                // Capturar cabeceras de cuotas de pagos de forma robusta
+                // Capturar cabeceras de cuotas de pagos
                 let cuotasHeaderRow = rows.find(r => r && r.c && r.c[colCuota] && safeString(r.c[colCuota]).toUpperCase() === 'CUOTA');
                 if (cuotasHeaderRow) {
                     for (let c = colCuota; c < cuotasHeaderRow.c.length; c++) {
@@ -398,29 +394,36 @@
                         desDataStarted = true;
                         continue;
                     }
-                    if (desDataStarted || (cVal && !cVal.toUpperCase().includes('VENCIMIENTO'))) {
+                    if (desDataStarted) {
                         if (cVal.toUpperCase() === 'TOTAL' || cVal.toUpperCase() === 'TOTALES') {
                             totalMat = getVal(row.c[colMat], true);
                             totalPag = getVal(row.c[colPag], true);
                             totalDes = getVal(row.c[colSus], true);
-                            let rawCum = safeString(row.c[colCum]).replace(/[^0-9.]/g, '');
-                            totalCum = parseFloat(rawCum) || 95;
-                            desDataStarted = false; // Bloqueo estricto tras fin de tabla
-                        } else if (cVal !== '') {
+                            
+                            if (row.c[colCum]) {
+                                let v = row.c[colCum].v;
+                                if (typeof v === 'number') {
+                                    totalCum = v <= 1 ? v * 100 : v;
+                                } else {
+                                    totalCum = parseFloat(safeString(row.c[colCum]).replace(/[^0-9.]/g, '')) || 95;
+                                }
+                            }
+                            desDataStarted = false; 
+                        } else if (cVal !== '' && !cVal.toUpperCase().includes('VENCIMIENTO')) {
                             cachedDesercionRows.push({
                                 ciclo: cVal,
                                 tutor: safeString(row.c[colTutor]),
                                 matriculados: getVal(row.c[colMat], true),
                                 pagantes: getVal(row.c[colPag], true),
                                 suspendidos: getVal(row.c[colSus], true),
-                                desercion: safeString(row.c[colDes]) || '0%',
-                                cumplimiento: safeString(row.c[colCum]) || '100%',
+                                desercion: safePercent(row.c[colDes]),
+                                cumplimiento: safePercent(row.c[colCum]),
                                 nota: safeString(row.c[colNot])
                             });
                         }
                     }
 
-                    // 2. Mapeo de Alumnos Alertas / Morosos (Y2:AE11 de forma exacta)
+                    // 2. Mapeo de Alumnos Alertas / Morosos (Y2:AE11)
                     let moroDniVal = safeString(row.c[colMoroDni]);
                     let moroAlumnoVal = safeString(row.c[colMoroAlumno]);
                     if (moroDniVal && moroDniVal.toUpperCase() !== 'DNI' && moroAlumnoVal) {
@@ -446,7 +449,7 @@
                     }
                 }
 
-                // Pintar KPIs e Indicadores de cabecera
+                // Renderizar KPI Globales exactos (95%)
                 document.getElementById('lbl-total-mat').innerText = Math.round(totalMat);
                 document.getElementById('lbl-total-pag').innerText = Math.round(totalPag);
                 document.getElementById('lbl-total-des').innerText = Math.round(totalDes);
@@ -468,14 +471,12 @@
                         if (overlay) {
                             overlay.classList.remove('opacity-100');
                             overlay.classList.add('opacity-0');
-                            overlay.classList.add('pointer-events-none');
                             setTimeout(() => overlay.remove(), 700);
                         }
                     }, 3500);
                     isFirstLoad = false;
                 }
 
-                // Renderizadores dinámicos de componentes HTML
                 renderDesercionTable(cachedDesercionRows);
                 renderMoroTable(moroDataCached);
                 renderCuotasTable(cuotasHeaders, cuotasBodyRows);
@@ -600,7 +601,6 @@
             document.getElementById('f-tutor-cum').innerText = Math.round(tCum) + '%';
             metricsContainer.classList.remove('hidden');
 
-            // Filtrado exacto de alumnos alertas de este tutor (4 para Lesly y 5 para Rodrigo de forma impecable)
             let filteredStudents = moroDataCached.filter(m => m.tutor.toLowerCase().trim() === selectedTutor.toLowerCase());
             tbodyFiltered.innerHTML = '';
 
@@ -719,8 +719,8 @@
             });
         }
 
-        loadDashboardData();
-        setInterval(loadDashboardData, 60000);
+        loadAllDashboardData();
+        setInterval(loadAllDashboardData, 60000);
     </script>
 </body>
 </html>
