@@ -316,7 +316,7 @@
                 let num = parseFloat(clean);
                 return isNaN(num) ? 0 : num;
             }
-            return str;
+            return cell && cell.f !== undefined && cell.f !== null ? cell.f : str;
         }
 
         function safePercent(cell) {
@@ -325,7 +325,7 @@
             if (cell.v !== null && cell.v !== undefined) {
                 let num = parseFloat(cell.v);
                 if (!isNaN(num)) {
-                    if (num >= -1 && num <= 1) {
+                    if (num > -1 && num <= 1) {
                         return (num * 100).toFixed(1) + '%';
                     }
                     return num.toFixed(1) + '%';
@@ -357,43 +357,6 @@
                 const tableData = await fetchSheetData(SHEET_JSON_URL);
                 const rows = tableData.rows;
 
-                // ESCÁNER INTELIGENTE DE MAPEO ASOCIATIVO DE CABECERAS (MATRICIAL)
-                let colCiclo = 1, colTutor = 2, colMat = 3, colPag = 4, colSus = 5, colDes = 6, colCum = 7, colNot = 8;
-                let colCuota = 12;
-                let colMoroNum = 24, colMoroDni = 25, colMoroAlumno = 26, colMoroCorte = 27, colMoroTutor = 28, colMoroCond = 29, colMoroMotiv = 30;
-
-                for (let i = 0; i < Math.min(rows.length, 10); i++) {
-                    if (!rows[i] || !rows[i].c) continue;
-                    let labels = rows[i].c.map(cell => safeString(cell).toUpperCase());
-                    
-                    let pos = labels.indexOf('CICLO');
-                    if (pos !== -1 && pos < 4) {
-                        colCiclo = pos;
-                        colTutor = labels.indexOf('TUTO') !== -1 ? labels.indexOf('TUTO') : pos + 1;
-                        colMat = labels.indexOf('MAT') !== -1 ? labels.indexOf('MAT') : pos + 2;
-                        colPag = labels.indexOf('PAG') !== -1 ? labels.indexOf('PAG') : pos + 3;
-                        colSus = labels.indexOf('SUS') !== -1 ? labels.indexOf('SUS') : pos + 4;
-                        colDes = labels.indexOf('DES') !== -1 ? labels.indexOf('DES') : pos + 5;
-                        colCum = labels.indexOf('CUM') !== -1 ? labels.indexOf('CUM') : pos + 6;
-                        colNot = labels.indexOf('NOT') !== -1 ? labels.indexOf('NOT') : pos + 7;
-                    }
-                    let qIdx = labels.indexOf('CUOTA');
-                    if (qIdx !== -1) colCuota = qIdx;
-
-                    let dIdx = labels.indexOf('DNI');
-                    if (dIdx !== -1 && dIdx > 15) {
-                        colMoroDni = dIdx;
-                        colMoroNum = labels.indexOf('#') !== -1 ? labels.indexOf('#') : dIdx - 1;
-                        colMoroAlumno = labels.indexOf('ALUMNO') !== -1 ? labels.indexOf('ALUMNO') : dIdx + 1;
-                        colMoroCorte = labels.indexOf('CORTE') !== -1 ? labels.indexOf('CORTE') : dIdx + 2;
-                        colMoroTutor = labels.findIndex((v, idx) => idx > colMoroAlumno && v.includes('TUTOR'));
-                        if(colMoroTutor === -1) colMoroTutor = dIdx + 3;
-                        let condIdx = labels.findIndex(v => v.includes('CONDI') || v.includes('PAGO'));
-                        colMoroCond = condIdx !== -1 ? condIdx : dIdx + 4;
-                        colMoroMotiv = labels.indexOf('MOTIVOS') !== -1 ? labels.indexOf('MOTIVOS') : dIdx + 5;
-                    }
-                }
-
                 cachedDesercionRows = [];
                 moroDataCached = [];
                 let cuotasHeaders = [];
@@ -402,78 +365,78 @@
                 let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 95;
                 let desDataStarted = false;
 
-                // Captura cabeceras dinámicas de cuotas de pagos
-                let cuotasHeaderRow = rows.find(r => r && r.c && safeString(r.c[colCuota]).toUpperCase() === 'CUOTA');
-                if (cuotasHeaderRow) {
-                    for (let c = colCuota; c < cuotasHeaderRow.c.length; c++) {
-                        let hVal = safeString(cuotasHeaderRow.c[c]);
-                        if (!hVal) break;
-                        cuotasHeaders.push(hVal);
+                // Capturar cabeceras fijas de las cuotas (M4:V4)
+                if (rows[3] && rows[3].c) {
+                    for (let c = 12; c <= 21; c++) {
+                        let hVal = safeString(rows[3].c[c]);
+                        if (hVal) cuotasHeaders.push(hVal);
                     }
                 }
 
-                // ANALIZADOR DE RUTA TOTALMENTE ABIERTO (i = 0) DESDE EL PRIMER REGISTRO
+                // PROCESAMIENTO MATRICIAL EN PARALELO SIN ERRORES DE CRUCE
                 for (let i = 0; i < rows.length; i++) {
                     const row = rows[i];
                     if (!row || !row.c) continue;
 
-                    // 1. Mapear Deserción (Detecta Lesly en la primera iteración posterior a cabecera)
-                    let cicloVal = safeString(row.c[colCiclo]);
-                    if (cicloVal.toUpperCase() === 'CICLO') {
-                        desDataStarted = true;
-                        continue;
-                    }
-                    if (desDataStarted) {
-                        if (cicloVal.toUpperCase().includes('TOTAL')) {
-                            totalMat = getVal(row.c[colMat], true);
-                            totalPag = getVal(row.c[colPag], true);
-                            totalDes = getVal(row.c[colSus], true);
-                            if (row.c[colCum]) {
-                                let v = row.c[colCum].v;
-                                totalCum = (typeof v === 'number' && v <= 1) ? v * 100 : parseFloat(v) || 95;
+                    // 1. Extracción de Deserción por Ciclo (B3:J15)
+                    if (row.c[2]) {
+                        let cicloVal = safeString(row.c[2]);
+                        if (cicloVal.toUpperCase() === 'CICLO') {
+                            desDataStarted = true;
+                            continue;
+                        }
+                        if (desDataStarted || (cicloVal !== '' && !cicloVal.toUpperCase().includes('VENCIMIENTO'))) {
+                            if (cicloVal.toUpperCase() === 'TOTAL' || cicloVal.toUpperCase() === 'TOTALES') {
+                                totalMat = getVal(row.c[4], true);
+                                totalPag = getVal(row.c[5], true);
+                                totalDes = getVal(row.c[6], true);
+                                if (row.c[8]) {
+                                    let v = row.c[8].v;
+                                    totalCum = (typeof v === 'number' && v <= 1) ? v * 100 : parseFloat(v) || 95;
+                                }
+                                desDataStarted = false; // Bloqueo de seguridad
+                            } else {
+                                cachedDesercionRows.push({
+                                    ciclo: cicloVal,
+                                    tutor: safeString(row.c[3]),
+                                    matriculados: getVal(row.c[4], true),
+                                    pagantes: getVal(row.c[5], true),
+                                    suspendidos: getVal(row.c[6], true),
+                                    desercion: safePercent(row.c[7]),
+                                    cumplimiento: safePercent(row.c[8]),
+                                    nota: safeString(row.c[9])
+                                });
                             }
-                            desDataStarted = false; // Cierre de tabla izquierda
-                        } else if (cicloVal !== '' && !cicloVal.toUpperCase().includes('VENCIMIENTO')) {
-                            cachedDesercionRows.push({
-                                ciclo: cicloVal,
-                                tutor: safeString(row.c[colTutor]),
-                                matriculados: getVal(row.c[colMat], true),
-                                pagantes: getVal(row.c[colPag], true),
-                                suspendidos: getVal(row.c[colSus], true),
-                                desercion: safePercent(row.c[colDes]),
-                                cumplimiento: safePercent(row.c[colCum]),
-                                nota: safeString(row.c[colNot])
-                            });
                         }
                     }
 
-                    // 2. Mapear Morosidad (Y2:AE1000)
-                    let moroDniVal = safeString(row.c[colMoroDni]);
-                    let moroAlumnoVal = safeString(row.c[colMoroAlumno]);
-                    if (moroDniVal && moroDniVal.toUpperCase() !== 'DNI' && moroAlumnoVal && moroAlumnoVal.toUpperCase() !== 'ALUMNO') {
+                    // 2. Extracción de Morosidad (Y3:AE11)
+                    let moroDniVal = safeString(row.c[25]); // Columna Z
+                    let moroAlumnoVal = safeString(row.c[26]); // Columna AA
+                    if (moroDniVal && moroDniVal.toUpperCase() !== 'DNI' && moroAlumnoVal) {
                         moroDataCached.push({
-                            num: row.c[colMoroNum] ? safeString(row.c[colMoroNum]) : (moroDataCached.length + 1),
+                            num: row.c[24] ? safeString(row.c[24]) : (moroDataCached.length + 1),
                             dni: moroDniVal,
                             alumno: moroAlumnoVal,
-                            corte: safeString(row.c[colMoroCorte]),
-                            tutor: safeString(row.c[colMoroTutor]),
-                            condicion: safeString(row.c[colMoroCond]),
-                            motivos: safeString(row.c[colMoroMotiv])
+                            corte: safeString(row.c[27]),
+                            tutor: safeString(row.c[28]),
+                            condicion: safeString(row.c[29]),
+                            motivos: safeString(row.c[30])
                         });
                     }
 
-                    // 3. Mapear Cronograma
-                    let cuotaCell = safeString(row.c[colCuota]);
-                    if (cuotaCell && !isNaN(cuotaCell) && cuotasHeaders.length > 0 && cuotasHeaderRow && i > rows.indexOf(cuotasHeaderRow)) {
+                    // 3. Extracción de Cronograma de Cuotas (M5:V11)
+                    let cuotaCell = safeString(row.c[12]); // Columna M
+                    if (cuotaCell && !isNaN(cuotaCell) && cuotasHeaders.length > 0 && i >= 4) {
                         let cells = [];
                         for (let k = 0; k < cuotasHeaders.length; k++) {
-                            cells.push(safeString(row.c[colCuota + k]) || '-');
+                            cells.push(safeString(row.c[12 + k]) || '-');
                         }
                         cuotasBodyRows.push(cells);
                     }
                 }
 
-                // Inyectar KPI de cabecera
+                // Pintar KPIs globales
                 document.getElementById('lbl-total-mat').innerText = Math.round(totalMat);
                 document.getElementById('lbl-total-pag').innerText = Math.round(totalPag);
                 document.getElementById('lbl-total-des').innerText = Math.round(totalDes);
@@ -643,11 +606,10 @@
                         <td class="py-3 px-4 font-mono text-slate-400">${row.dni}</td>
                         <td class="py-3 px-4 font-bold text-slate-100">${row.alumno}</td>
                         <td class="py-3 px-4 text-center text-slate-400">${row.corte}</td>
-                        <td class="py-3 px-4 text-slate-300 font-medium">${row.tutor}</td>
                         <td class="py-3 px-4 text-center">
                             <span class="px-2 py-1 rounded-md text-[10px] font-extrabold uppercase ${badgeClass}">${row.condicion}</span>
                         </td>
-                        <td class="py-3 px-4 text-slate-400 italic font-normal">${row.motivos}</td>
+                        <td class="py-3 px-4 text-slate-400 italic">${row.motivos}</td>
                     `;
                     tbodyFiltered.appendChild(tr);
                 });
