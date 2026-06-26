@@ -186,7 +186,7 @@
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-slate-800/80 pb-4">
                     <div>
                         <h3 class="text-lg font-bold text-white tracking-tight">👥 Estudiantes en Estado de Alerta / Deudores</h3>
-                        <p class="text-xs text-slate-400 mt-1">Control integral de cartera vencida y condiciones comerciales</p>
+                        <p class="text-xs text-slate-400 mt-1">Control de alumnos morosos y condiciones comerciales</p>
                     </div>
                     <div>
                         <input type="text" id="search-moro" oninput="filterMoroTable()" placeholder="Buscar alumno o tutor..." class="bg-slate-950/60 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full md:w-64 focus:outline-none focus:border-indigo-500 transition-colors">
@@ -325,7 +325,7 @@
             if (cell.v !== null && cell.v !== undefined) {
                 let num = parseFloat(cell.v);
                 if (!isNaN(num)) {
-                    if (num <= 1.0001 && num >= -0.0001) {
+                    if (num > -1 && num <= 1) {
                         return (num * 100).toFixed(1) + '%';
                     }
                     return num.toFixed(1) + '%';
@@ -357,32 +357,39 @@
                 const tableData = await fetchSheetData(SHEET_JSON_URL);
                 const rows = tableData.rows;
 
-                // LOCALIZADOR DINÁMICO DE ÍNDICES MATRICIAL ABSOLUTO
+                // ESCÁNER MATRICIAL DE COORDENADAS UNIFICADO
                 let idxCiclo = 1, idxTutor = 2, idxMat = 3, idxPag = 4, idxSus = 5, idxDes = 6, idxCum = 7, idxNot = 8;
                 let idxCuotaCol = 12;
                 let idxMoroNum = 24, idxMoroDni = 25, idxMoroAlumno = 26, idxMoroCorte = 27, idxMoroTutor = 28, idxMoroCond = 29, idxMoroMotiv = 30;
 
-                for (let i = 0; i < Math.min(rows.length, 6); i++) {
+                for (let i = 0; i < Math.min(rows.length, 10); i++) {
                     if (!rows[i] || !rows[i].c) continue;
-                    let line = rows[i].c.map(cell => safeString(cell).toUpperCase());
+                    let labels = rows[i].c.map(cell => safeString(cell).toUpperCase());
                     
-                    let cPos = line.indexOf('CICLO');
-                    if (cPos !== -1) {
-                        idxCiclo = cPos; idxTutor = cPos + 1; idxMat = cPos + 2; idxPag = cPos + 3;
-                        idxSus = cPos + 4; idxDes = cPos + 5; idxCum = cPos + 6; idxNot = cPos + 7;
+                    let pos = labels.indexOf('CICLO');
+                    if (pos !== -1 && pos < 4) {
+                        idxCiclo = pos;
+                        idxTutor = labels.indexOf('TUTO') !== -1 ? labels.indexOf('TUTO') : pos + 1;
+                        idxMat = labels.indexOf('MAT') !== -1 ? labels.indexOf('MAT') : pos + 2;
+                        idxPag = labels.indexOf('PAG') !== -1 ? labels.indexOf('PAG') : pos + 3;
+                        idxSus = labels.indexOf('SUS') !== -1 ? labels.indexOf('SUS') : pos + 4;
+                        idxDes = labels.indexOf('DES') !== -1 ? labels.indexOf('DES') : pos + 5;
+                        idxCum = labels.indexOf('CUM') !== -1 ? labels.indexOf('CUM') : pos + 6;
+                        idxNot = labels.indexOf('NOT') !== -1 ? labels.indexOf('NOT') : pos + 7;
                     }
-                    let qPos = line.indexOf('CUOTA');
-                    if (qPos !== -1) idxCuotaCol = qPos;
+                    let qIdx = labels.indexOf('CUOTA');
+                    if (qIdx !== -1) idxCuotaCol = qIdx;
 
-                    let dPos = line.indexOf('DNI');
-                    if (dPos !== -1) {
-                        idxMoroDni = dPos;
-                        idxMoroNum = line.indexOf('#') !== -1 ? line.indexOf('#') : dPos - 1;
-                        idxMoroAlumno = line.indexOf('ALUMNO') !== -1 ? line.indexOf('ALUMNO') : dPos + 1;
-                        idxMoroCorte = line.indexOf('CORTE') !== -1 ? line.indexOf('CORTE') : dPos + 2;
-                        idxMoroTutor = line.indexOf('TUTOR') !== -1 ? line.indexOf('TUTOR') : dPos + 3;
-                        idxMoroCond = line.findIndex(v => v.includes('CONDI') || v.includes('PAGO'));
-                        idxMoroMotiv = line.indexOf('MOTIVOS') !== -1 ? line.indexOf('MOTIVOS') : dPos + 5;
+                    let dIdx = labels.indexOf('DNI');
+                    if (dIdx !== -1 && dIdx > 15) {
+                        idxMoroDni = dIdx;
+                        idxMoroNum = labels.indexOf('#') !== -1 ? labels.indexOf('#') : dIdx - 1;
+                        idxMoroAlumno = labels.indexOf('ALUMNO') !== -1 ? labels.indexOf('ALUMNO') : dIdx + 1;
+                        idxMoroCorte = labels.indexOf('CORTE') !== -1 ? labels.indexOf('CORTE') : dIdx + 2;
+                        idxMoroTutor = labels.indexOf('TUTOR') !== -1 ? labels.indexOf('TUTOR') : dIdx + 3;
+                        let condIdx = labels.findIndex(v => v.includes('CONDI') || v.includes('PAGO'));
+                        idxMoroCond = condIdx !== -1 ? condIdx : dIdx + 4;
+                        idxMoroMotiv = labels.indexOf('MOTIVOS') !== -1 ? labels.indexOf('MOTIVOS') : dIdx + 5;
                     }
                 }
 
@@ -390,9 +397,11 @@
                 moroDataCached = [];
                 let cuotasHeaders = [];
                 let cuotasBodyRows = [];
-                let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 95;
 
-                // Captura cabeceras del Cronograma
+                let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 95;
+                let desDataStarted = false;
+
+                // Capturar cabeceras de cuotas de pagos
                 let cuotasHeaderRow = rows.find(r => r && r.c && safeString(r.c[idxCuotaCol]).toUpperCase() === 'CUOTA');
                 if (cuotasHeaderRow) {
                     for (let c = idxCuotaCol; c < cuotasHeaderRow.c.length; c++) {
@@ -402,70 +411,68 @@
                     }
                 }
 
-                // EXTRACCIÓN MAESTRA EN UN SOLO RECORRIDO
                 for (let i = 0; i < rows.length; i++) {
                     const row = rows[i];
                     if (!row || !row.c) continue;
 
-                    // 1. Deserción (B2:J15)
-                    let cicloVal = safeString(row.c[colCiclo]);
-                    if (cicloVal && cicloVal.toUpperCase() !== 'CICLO' && !cicloNameIsHeader(cicloVal)) {
-                        if (cicloNameEqualsTotal(cicloName)) {
-                            totalMat = getVal(row.c[colMat], true);
-                            totalPag = getVal(row.c[colPag], true);
-                            totalDes = getVal(row.c[colSus], true);
-                            if (row.c[colCum]) {
-                                let v = row.c[colCum].v;
+                    // 1. Mapeo de Deserción
+                    let cicloVal = safeString(row.c[idxCiclo]);
+                    if (cicloVal.toUpperCase() === 'CICLO') {
+                        desDataStarted = true;
+                        continue;
+                    }
+                    if (desDataStarted) {
+                        if (cicloVal.toUpperCase().includes('TOTAL')) {
+                            totalMat = getVal(row.c[idxMat], true);
+                            totalPag = getVal(row.c[idxPag], true);
+                            totalDes = getVal(row.c[idxSus], true);
+                            
+                            if (row.c[idxCum]) {
+                                let v = row.c[idxCum].v;
                                 totalCum = (typeof v === 'number' && v <= 1) ? v * 100 : parseFloat(v) || 95;
                             }
-                        } else {
+                            desDataStarted = false; 
+                        } else if (cicloVal !== '' && !cicloVal.toUpperCase().includes('VENCIMIENTO')) {
                             cachedDesercionRows.push({
-                                ciclo: cicloName,
-                                tutor: safeString(row.c[colTutor]),
-                                matriculados: getVal(row.c[colMat], true),
-                                pagantes: getVal(row.c[colPag], true),
-                                suspendidos: getVal(row.c[colSus], true),
-                                desercion: safePercent(row.c[colDes]),
-                                cumplimiento: safePercent(row.c[colCum]),
-                                nota: safeString(row.c[colNot])
+                                ciclo: cicloVal,
+                                tutor: safeString(row.c[idxTutor]),
+                                matriculados: getVal(row.c[idxMat], true),
+                                pagantes: getVal(row.c[idxPag], true),
+                                suspendidos: getVal(row.c[idxSus], true),
+                                desercion: safePercent(row.c[idxDes]),
+                                cumplimiento: safePercent(row.c[idxCum]),
+                                nota: safeString(row.c[idxNot])
                             });
                         }
                     }
 
-                    // 2. Morosidad (Y2:AE1000)
-                    let mDni = safeString(row.c[colMoroDni]);
-                    let mAlum = safeString(row.c[colMoroAlumno]);
+                    // 2. Mapeo de Alumnos Alertas / Morosos (Y2:AE1000)
+                    let moroDniVal = safeString(row.c[idxMoroDni]);
+                    let moroAlumnoVal = safeString(row.c[idxMoroAlumno]);
                     if (moroDniVal && moroDniVal.toUpperCase() !== 'DNI' && moroAlumnoVal) {
                         moroDataCached.push({
-                            num: row.c[colMoroNum] ? safeString(row.c[colMoroNum]) : (moroDataCached.length + 1),
+                            num: row.c[idxMoroNum] ? safeString(row.c[idxMoroNum]) : (moroDataCached.length + 1),
                             dni: moroDniVal,
                             alumno: moroAlumnoVal,
-                            corte: safeString(row.c[colMoroCorte]),
-                            tutor: safeString(row.c[colMoroTutor]),
-                            condicion: safeString(row.c[colMoroCond]),
-                            motivos: safeString(row.c[colMoroMotiv])
+                            corte: safeString(row.c[idxMoroCorte]),
+                            tutor: safeString(row.c[idxMoroTutor]),
+                            condicion: safeString(row.c[idxMoroCond]),
+                            motivos: safeString(row.c[idxMoroMotiv])
                         });
                     }
 
-                    // 3. Cronograma de Cuotas (M3:V11)
-                    let qVal = safeString(row.c[colCuota]);
-                    if (qCell && !isNaN(qCell) && cuotasHeaders.length > 0 && i > rows.indexOf(cuotasHeaderRow)) {
+                    // 3. Mapeo de Filas del Cronograma de Cuotas
+                    let cuotaCell = safeString(row.c[idxCuotaCol]);
+                    if (cuotaCell && !isNaN(cuotaCell) && cuotasHeaders.length > 0 && cuotasHeaderRow && i > rows.indexOf(cuotasHeaderRow)) {
                         let cells = [];
                         for (let k = 0; k < cuotasHeaders.length; k++) {
-                            cells.push(safeString(row.c[colCuota + k]) || '-');
+                            cells.push(safeString(row.c[idxCuotaCol + k]) || '-');
                         }
                         cuotasBodyRows.push(cells);
                     }
                 }
 
-                function safeString(cell) {
-                    if (!cell) return '';
-                    if (cell.f !== undefined && cell.f !== null) return cell.f.trim();
-                    if (cell.v !== null && cell.v !== undefined) return cell.v.toString().trim();
-                    return '';
-                }
-
-                // Carga dinámica de vistas e indicadores
+                // Renderizar KPI Globales exactos (95%)
                 document.getElementById('lbl-total-mat').innerText = Math.round(totalMat);
                 document.getElementById('lbl-total-pag').innerText = Math.round(totalPag);
                 document.getElementById('lbl-total-des').innerText = Math.round(totalDes);
@@ -708,7 +715,8 @@
                             grid: { color: 'rgba(51, 65, 85, 0.2)' }, 
                             ticks: { 
                                 color: '#94a3b8',
-                                callback: function(value) { if (value % 1 === 0) { return value; } }
+                                precision: 0,
+                                stepSize: 10
                             } 
                         }
                     }
