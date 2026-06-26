@@ -365,34 +365,45 @@
                 let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 95;
                 let desDataStarted = false;
 
-                for (let i = 2; i < rows.length; i++) {
+                // EXTRACCIÓN MAESTRA CORREGIDA Y UNIFICADA
+                for (let i = 0; i < rows.length; i++) {
                     const row = rows[i];
                     if (!row || !row.c) continue;
 
-                    // 1. EXTRAER TABLA DE DESERCIÓN (B3:J15)
-                    let cicloVal = row.c[2] ? getVal(row.c[2]) : '';
-                    if (cicloVal) {
-                        if (cicloVal.toUpperCase() === 'TOTAL' || cicloVal.toUpperCase() === 'TOTALES') {
-                            totalMat = getVal(row.c[4], true);
-                            totalPag = getVal(row.c[5], true);
-                            totalDes = getVal(row.c[6], true);
-                            let tc = getVal(row.c[8], true);
-                            totalCum = (tc <= 1 && tc > 0) ? tc * 100 : tc || 95;
-                        } else if (!cicloVal.toUpperCase().includes('VENCIMIENTO') && !cicloVal.toUpperCase().includes('CICLO')) {
-                            cachedDesercionRows.push({
-                                ciclo: cicloVal,
-                                tutor: row.c[3] ? getVal(row.c[3]) : '',
-                                matriculados: getVal(row.c[4], true),
-                                pagantes: getVal(row.c[5], true),
-                                suspendidos: getVal(row.c[6], true),
-                                desercion: safePercent(row.c[7]),
-                                cumplimiento: safePercent(row.c[8]),
-                                nota: row.c[9] ? getVal(row.c[9]) : ''
-                            });
+                    // 1. Extracción de Deserción por Ciclo (B3:J15)
+                    let cicloName = row.c[2] ? getVal(row.c[2]) : '';
+                    if (cicloName) {
+                        let upperCiclo = cicloName.toUpperCase();
+                        if (upperCiclo === 'CICLO') {
+                            desDataStarted = true;
+                            continue;
+                        }
+                        if (desDataStarted) {
+                            if (upperCiclo === 'TOTAL' || upperCiclo === 'TOTALES') {
+                                totalMat = getVal(row.c[4], true);
+                                totalPag = getVal(row.c[5], true);
+                                totalDes = getVal(row.c[6], true);
+                                if (row.c[8]) {
+                                    let v = row.c[8].v;
+                                    totalCum = (typeof v === 'number' && v <= 1) ? v * 100 : parseFloat(v) || 95;
+                                }
+                                desDataStarted = false; // Detener escáner
+                            } else if (cicloName !== '' && !upperCiclo.includes('VENCIMIENTO')) {
+                                cachedDesercionRows.push({
+                                    ciclo: cicloName,
+                                    tutor: row.c[3] ? getVal(row.c[3]) : '',
+                                    matriculados: getVal(row.c[4], true),
+                                    pagantes: getVal(row.c[5], true),
+                                    suspendidos: getVal(row.c[6], true),
+                                    desercion: safePercent(row.c[7]),
+                                    cumplimiento: safePercent(row.c[8]),
+                                    nota: row.c[9] ? getVal(row.c[9]) : ''
+                                });
+                            }
                         }
                     }
 
-                    // 2. EXTRAER MOROSIDAD COMPLETA (Y3:AE1000)
+                    // 2. Extracción de Morosidad (Y3:AE11)
                     let mDni = row.c[25] ? getVal(row.c[25]) : '';
                     let mAlum = row.c[26] ? getVal(row.c[26]) : '';
                     if (mDni && mDni.toUpperCase() !== 'DNI' && mAlum && mAlum.toUpperCase() !== 'ALUMNO') {
@@ -407,11 +418,11 @@
                         });
                     }
 
-                    // 3. EXTRAER CRONOGRAMA DE CUOTAS (M5:V11)
-                    let cCell = row.c[12] ? getVal(row.c[12]) : '';
-                    if (cCell && !isNaN(cCell) && i >= 4 && i <= 10) {
+                    // 3. Extracción de Cronograma de Cuotas (M5:V11)
+                    let cuotaCell = row.c[12] ? getVal(row.c[12]) : '';
+                    if (cuotaCell && !isNaN(cuotaCell) && i >= 4 && i <= 10) {
                         let cells = [];
-                        cells.push(cCell);
+                        cells.push(cuotaCell);
                         for (let k = 13; k <= 21; k++) {
                             cells.push(row.c[k] ? getVal(row.c[k]) : '-');
                         }
@@ -592,7 +603,7 @@
                         <td class="py-3 px-4 text-center">
                             <span class="px-2 py-1 rounded-md text-[10px] font-extrabold uppercase ${badgeClass}">${row.condicion}</span>
                         </td>
-                        <td class="py-3 px-4 text-slate-400 italic">${row.motivos}</td>
+                        <td class="py-3 px-4 text-slate-400 italic font-normal">${row.motivos}</td>
                     `;
                     tbodyFiltered.appendChild(tr);
                 });
