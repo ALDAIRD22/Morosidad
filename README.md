@@ -135,7 +135,8 @@
                 <div class="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
                     <div id="bar-cum-global" class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
                 </div>
-            </section>
+            </div>
+        </section>
 
         <!-- VISTA 1: DESERCIÓN -->
         <div id="view-desercion" class="tab-view space-y-8">
@@ -211,7 +212,7 @@
             </div>
         </div>
 
-        <!-- VISTA 3: FILTRAR POR TUTOR (HOJA DE TRANSICIÓN DEFINITIVA) -->
+        <!-- VISTA 3: FILTRAR POR TUTOR (HOJA DE TRANSICIÓN PERFECCIONADA) -->
         <div id="view-tutor-filter" class="tab-view hidden space-y-6">
             <div class="premium-card rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -346,43 +347,47 @@
                 ]);
 
                 // ==========================================
-                // 1. PROCESAR PESTAÑA DES (MÉTODOS EXACTOS)
+                // 1. ESCÁNER BASADO EN BANDERAS DINÁMICAS (DES)
                 // ==========================================
                 const rowsDes = tableDes.rows;
-                let idxCiclo = 1, idxTutor = 2, idxMat = 3, idxPag = 4, idxSus = 5, idxDes = 6, idxCum = 7, idxNot = 8;
-                let startRowDesIdx = 2;
-
                 cachedDesercionRows = [];
                 let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 0;
+                let desDataStarted = false;
 
-                for(let i = startRowDesIdx; i < rowsDes.length; i++) {
+                for(let i = 0; i < rowsDes.length; i++) {
                     const row = rowsDes[i];
-                    if (!row || !row.c || !row.c[idxCiclo]) continue;
+                    if (!row || !row.c) continue;
 
-                    let cicloName = getVal(row.c[idxCiclo]).trim();
-                    
-                    // FRENO DE SEGURIDAD: Al llegar al Total de la tabla B2:I19, rompemos el bucle
-                    if(cicloName.toUpperCase() === 'TOTAL' || cicloName.toUpperCase() === 'TOTALES') {
-                        totalMat = getVal(row.c[idxMat], true);
-                        totalPag = getVal(row.c[idxPag], true);
-                        totalDes = getVal(row.c[idxSus], true);
-                        let cumText = getVal(row.c[idxCum]);
-                        totalCum = parseFloat(cumText) || (totalMat > 0 ? (totalPag / totalMat) * 100 : 0);
-                        break; 
+                    let bVal = row.c[1] ? getVal(row.c[1]).trim() : '';
+
+                    if (bVal.toUpperCase() === 'CICLO') {
+                        desDataStarted = true;
+                        continue; // Evita meter la cabecera al array
                     }
-                    
-                    if(cicloName === '' || cicloName.toUpperCase().includes("VENCIMIENTO")) continue;
 
-                    cachedDesercionRows.push({
-                        ciclo: cicloName,
-                        tutor: getVal(row.c[idxTutor]).trim(),
-                        matriculados: getVal(row.c[idxMat], true),
-                        pagantes: getVal(row.c[idxPag], true),
-                        suspendidos: getVal(row.c[idxSus], true),
-                        desercion: getVal(row.c[idxDes]),
-                        cumplimiento: getVal(row.c[idxCum]),
-                        nota: row.c[idxNot] ? getVal(row.c[idxNot]) : ''
-                    });
+                    if (desDataStarted) {
+                        if (bVal.toUpperCase() === 'TOTAL' || bVal.toUpperCase() === 'TOTALES') {
+                            totalMat = getVal(row.c[3], true);
+                            totalPag = getVal(row.c[4], true);
+                            totalDes = getVal(row.c[5], true);
+                            let cumText = getVal(row.c[7]);
+                            totalCum = parseFloat(cumText) || (totalMat > 0 ? (totalPag / totalMat) * 100 : 0);
+                            break; // Se detiene inmediatamente para no leer subtablas basura
+                        }
+
+                        if (bVal === '') continue;
+
+                        cachedDesercionRows.push({
+                            ciclo: bVal,
+                            tutor: row.c[2] ? getVal(row.c[2]).trim() : '',
+                            matriculados: getVal(row.c[3], true),
+                            pagantes: getVal(row.c[4], true),
+                            suspendidos: getVal(row.c[5], true),
+                            desercion: row.c[6] ? getVal(row.c[6]).trim() : '',
+                            cumplimiento: row.c[7] ? getVal(row.c[7]).trim() : '',
+                            nota: row.c[8] ? getVal(row.c[8]).trim() : ''
+                        });
+                    }
                 }
 
                 // Renderizar KPI Globales sin decimales
@@ -420,35 +425,41 @@
                 renderCuotasTable(rowsDes);
 
                 // ==========================================
-                // 2. PROCESAR PESTAÑA MORO (A1:G100 EXACTO)
+                // 2. ESCÁNER BASADO EN BANDERAS DINÁMICAS (MORO)
                 // ==========================================
                 const rowsMoro = tableMoro.rows;
-                let idxMoroNum = 0, idxMoroDni = 1, idxMoroAlumno = 2, idxMoroCorte = 3, idxMoroTutor = 4, idxMoroCondicion = 5, idxMoroMotivos = 6;
-                
                 moroDataCached = [];
-                for(let j = 1; j < rowsMoro.length; j++) {
+                let moroDataStarted = false;
+
+                for(let j = 0; j < rowsMoro.length; j++) {
                     const row = rowsMoro[j];
                     if(!row || !row.c) continue;
 
-                    let sName = row.c[idxMoroAlumno] ? getVal(row.c[idxMoroAlumno]).trim() : '';
-                    let sDni = row.c[idxMoroDni] ? getVal(row.c[idxMoroDni]).trim() : '';
-                    
-                    // Si no contiene alumno o DNI válido saltamos la línea basura
-                    if(!sName || !sDni) continue;
+                    let cellDni = row.c[1] ? getVal(row.c[1]).trim() : '';
+                    let cellAlumno = row.c[2] ? getVal(row.c[2]).trim() : '';
 
-                    moroDataCached.push({
-                        num: getVal(row.c[idxMoroNum]),
-                        dni: sDni,
-                        alumno: sName,
-                        corte: getVal(row.c[idxMoroCorte]),
-                        tutor: getVal(row.c[idxMoroTutor]).trim(),
-                        condicion: getVal(row.c[idxMoroCondicion]),
-                        motivos: row.c[idxMoroMotivos] ? getVal(row.c[idxMoroMotivos]) : ''
-                    });
+                    if(cellDni.toUpperCase() === 'DNI' || cellAlumno.toUpperCase() === 'ALUMNO') {
+                        moroDataStarted = true;
+                        continue;
+                    }
+
+                    if(moroDataStarted) {
+                        if(!cellDni && !cellAlumno) continue; // Evita inyectar celdas fantasmas
+
+                        moroDataCached.push({
+                            num: row.c[0] ? getVal(row.c[0]).trim() : '',
+                            dni: cellDni,
+                            alumno: cellAlumno,
+                            corte: row.c[3] ? getVal(row.c[3]).trim() : '',
+                            tutor: row.c[4] ? getVal(row.c[4]).trim() : '',
+                            condicion: row.c[5] ? getVal(row.c[5]).trim() : '',
+                            motivos: row.c[6] ? getVal(row.c[6]).trim() : ''
+                        });
+                    }
                 }
                 renderMoroTable(moroDataCached);
 
-                // 3. ACTUALIZAR DESPLEGABLE DE LA HOJA DE TRANSICIÓN
+                // 3. ACTUALIZAR DESPLEGABLE
                 populateTutorDropdown();
                 renderCharts(cachedDesercionRows, complianceNum);
                 document.getElementById('error-box').className = 'hidden';
@@ -552,7 +563,7 @@
                 return;
             }
 
-            // 1. Calcular métricas resumidas en la transición
+            // 1. Métricas en Hoja de Transición
             let tMat = 0, tPag = 0, tDes = 0;
             let tutorRows = cachedDesercionRows.filter(r => r.tutor.toLowerCase() === selectedTutor.toLowerCase());
             
@@ -570,7 +581,7 @@
             document.getElementById('f-tutor-cum').innerText = Math.round(tCum) + '%';
             metricsContainer.classList.remove('hidden');
 
-            // 2. Filtrar alumnos morosos (Muestra las 4 filas de Lesly y 5 de Rodrigo de forma exacta)
+            // 2. Alumnos deudores del tutor (4 de Lesly y 5 de Rodrigo Exactos)
             let filteredStudents = moroDataCached.filter(m => m.tutor.toLowerCase() === selectedTutor.toLowerCase());
             tbodyFiltered.innerHTML = '';
 
