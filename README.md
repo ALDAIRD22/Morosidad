@@ -91,7 +91,7 @@
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
-        <!-- MENÚ DE NAVEGACIÓN POR TARJETAS (TABS ACTUALIZADO) -->
+        <!-- MENÚ DE NAVEGACIÓN POR TARJETAS -->
         <nav class="grid grid-cols-2 lg:grid-cols-4 gap-5">
             <button onclick="switchTab('view-desercion')" id="btn-view-desercion" class="nav-card premium-card text-left rounded-2xl p-5 border-indigo-500/40 bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-lg shadow-indigo-500/5">
                 <div class="text-3xl">📉</div>
@@ -186,7 +186,7 @@
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-slate-800/80 pb-4">
                     <div>
                         <h3 class="text-lg font-bold text-white tracking-tight">👥 Estudiantes en Estado de Alerta / Deudores</h3>
-                        <p class="text-xs text-slate-400 mt-1">Lista en tiempo real procesada desde la pestaña MORO</p>
+                        <p class="text-xs text-slate-400 mt-1">Lista completa procesada desde la pestaña MORO</p>
                     </div>
                     <div>
                         <input type="text" id="search-moro" oninput="filterMoroTable()" placeholder="Buscar alumno o tutor..." class="bg-slate-950/60 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full md:w-64 focus:outline-none focus:border-indigo-500 transition-colors">
@@ -212,12 +212,12 @@
             </div>
         </div>
 
-        <!-- VISTA NÚMERO 3: HOJA DE TRANSICIÓN - FILTRAR POR TUTOR -->
+        <!-- VISTA 3: FILTRAR POR TUTOR (HOJA DE TRANSICIÓN) -->
         <div id="view-tutor-filter" class="tab-view hidden space-y-6">
             <div class="premium-card rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h3 class="text-lg font-bold text-white tracking-tight">🔍 Buscador y Filtro Dinámico por Tutor</h3>
-                    <p class="text-xs text-slate-400 mt-1">Selecciona un tutor para aislar sus métricas y su lista de alumnos deudores.</p>
+                    <p class="text-xs text-slate-400 mt-1">Selecciona un tutor para aislar sus métricas y su lista de alumnos asignados.</p>
                 </div>
                 <div>
                     <select id="tutor-select-filter" onchange="onTutorFilterChange()" class="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full sm:w-64 focus:outline-none focus:border-indigo-500 transition-colors font-semibold">
@@ -237,7 +237,7 @@
                     <h4 class="text-2xl font-black text-emerald-400 mt-1" id="f-tutor-pag">0</h4>
                 </div>
                 <div class="premium-card rounded-xl p-4 bg-slate-900/20">
-                    <p class="text-[11px] font-bold text-slate-400 uppercase">Deserciones</p>
+                    <p class="text-[11px] font-bold text-slate-400 uppercase">Deserciones (Sus.)</p>
                     <h4 class="text-2xl font-black text-rose-400 mt-1" id="f-tutor-des">0</h4>
                 </div>
                 <div class="premium-card rounded-xl p-4 bg-slate-900/20">
@@ -248,21 +248,22 @@
 
             <!-- Tabla de Alumnos asignados al Tutor Filtrado -->
             <div class="premium-card rounded-2xl p-6 shadow-xl">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Alumnos con Alertas / Deudas Asociados al Tutor</h3>
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Alumnos Asociados al Tutor Seleccionado</h3>
                 <div class="w-full overflow-x-auto">
                     <table class="w-full text-left border-collapse text-xs">
                         <thead>
                             <tr class="bg-slate-950 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 text-[10px]">
+                                <th class="py-3.5 px-4 w-12">#</th>
                                 <th class="py-3.5 px-4">DNI</th>
                                 <th class="py-3.5 px-4">Alumno</th>
                                 <th class="py-3.5 px-4 text-center">Corte</th>
                                 <th class="py-3.5 px-4 text-center">Condición de Pago</th>
-                                <th class="py-3.5 px-4">Motivos</th>
+                                <th class="py-3.5 px-4">Motivos / Comentarios</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-800/40 font-semibold text-slate-300" id="table-body-tutor-filtered">
                             <tr>
-                                <td colspan="5" class="py-6 text-center text-slate-500 italic">Por favor, selecciona un tutor del menú desplegable superior.</td>
+                                <td colspan="6" class="py-6 text-center text-slate-500 italic">Por favor, selecciona un tutor del menú desplegable superior.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -303,7 +304,6 @@
         let chartPie = null;
         let isFirstLoad = true;
         
-        // Cache Global de datos para filtros cruzados instantáneos
         let cachedDesercionRows = [];
         let moroDataCached = [];
 
@@ -346,22 +346,47 @@
                     fetchSheetData(URL_MORO)
                 ]);
 
-                // 1. PROCESAR PESTAÑA DES
+                // ==========================================
+                // 1. ESCÁNER DINÁMICO DE COLUMNAS - PESTAÑA DES
+                // ==========================================
                 const rowsDes = tableDes.rows;
+                let idxCiclo = 0, idxTutor = 1, idxMat = 2, idxPag = 3, idxSus = 4, idxDes = 5, idxCum = 6, idxNot = 7;
+                let startRowDesIdx = 1;
+
+                for(let r = 0; r < rowsDes.length; r++) {
+                    if(rowsDes[r] && rowsDes[r].c) {
+                        let lineValues = rowsDes[r].c.map(cell => cell ? getVal(cell).trim().toUpperCase() : '');
+                        let cicloPos = lineValues.indexOf('CICLO');
+                        if(cicloPos !== -1) {
+                            idxCiclo = cicloPos;
+                            idxTutor = cicloPos + 1; 
+                            idxMat = lineValues.indexOf('MAT');
+                            idxPag = lineValues.indexOf('PAG');
+                            idxSus = lineValues.indexOf('SUS');
+                            idxDes = lineValues.indexOf('DES');
+                            idxCum = lineValues.indexOf('CUM');
+                            idxNot = lineValues.indexOf('NOT');
+                            startRowDesIdx = r + 1;
+                            break;
+                        }
+                    }
+                }
+
                 cachedDesercionRows = [];
                 let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 0;
 
-                for(let i = 2; i < rowsDes.length; i++) {
+                for(let i = startRowDesIdx; i < rowsDes.length; i++) {
                     const row = rowsDes[i];
-                    if (!row || !row.c || !row.c[1]) continue;
 
-                    let cicloName = getVal(row.c[1]).trim();
-                    if(cicloName === 'TOTAL' || cicloName === '') {
-                        if(cicloName === 'TOTAL') {
-                            totalMat = getVal(row.c[3], true);
-                            totalPag = getVal(row.c[4], true);
-                            totalDes = getVal(row.c[5], true);
-                            let cumText = getVal(row.c[7]);
+                    if (!row || !row.c || row.c[idxCiclo] === null || row.c[idxCiclo] === undefined) continue;
+
+                    let cicloName = getVal(row.c[idxCiclo]).trim();
+                    if(cicloName === 'TOTAL' || cicloName === 'TOTALES' || cicloName === '') {
+                        if(cicloName === 'TOTAL' || cicloName === 'TOTALES') {
+                            totalMat = getVal(row.c[idxMat], true);
+                            totalPag = getVal(row.c[idxPag], true);
+                            totalDes = getVal(row.c[idxSus], true);
+                            let cumText = getVal(row.c[idxCum]);
                             totalCum = parseFloat(cumText) || (totalMat > 0 ? (totalPag / totalMat) * 100 : 0);
                         }
                         continue;
@@ -371,17 +396,17 @@
 
                     cachedDesercionRows.push({
                         ciclo: cicloName,
-                        tutor: getVal(row.c[2]).trim(),
-                        matriculados: getVal(row.c[3], true),
-                        pagantes: getVal(row.c[4], true),
-                        suspendidos: getVal(row.c[5], true),
-                        desercion: getVal(row.c[6]),
-                        cumplimiento: getVal(row.c[7]),
-                        nota: getVal(row.c[8])
+                        tutor: getVal(row.c[idxTutor]).trim(),
+                        matriculados: getVal(row.c[idxMat], true),
+                        pagantes: getVal(row.c[idxPag], true),
+                        suspendidos: getVal(row.c[idxSus], true),
+                        desercion: getVal(row.c[idxDes]),
+                        cumplimiento: getVal(row.c[idxCum]),
+                        nota: row.c[idxNot] ? getVal(row.c[idxNot]) : ''
                     });
                 }
 
-                // Renderizar KPIs globales sin decimales (.00)
+                // Renderizar KPI Globales sin decimales
                 document.getElementById('lbl-total-mat').innerText = Math.round(totalMat);
                 document.getElementById('lbl-total-pag').innerText = Math.round(totalPag);
                 document.getElementById('lbl-total-des').innerText = Math.round(totalDes);
@@ -390,7 +415,6 @@
                 document.getElementById('lbl-total-cum').innerText = Math.round(complianceNum) + '%';
                 document.getElementById('bar-cum-global').style.width = Math.round(complianceNum) + '%';
 
-                // Splash screen config
                 if (isFirstLoad) {
                     document.getElementById('welcome-avance').innerText = Math.round(complianceNum) + '% Cumplimiento';
                     let faltaProgreso = 100 - complianceNum;
@@ -416,29 +440,49 @@
                 renderDesercionTable(cachedDesercionRows);
                 renderCuotasTable(rowsDes);
 
-                // 2. PROCESAR PESTAÑA MORO
+                // ==========================================
+                // 2. ESCÁNER DINÁMICO DE COLUMNAS - PESTAÑA MORO
+                // ==========================================
                 const rowsMoro = tableMoro.rows;
+                let idxMoroNum = 0, idxMoroDni = 1, idxMoroAlumno = 2, idxMoroCorte = 3, idxMoroTutor = 4, idxMoroCondicion = 5, idxMoroMotivos = 6;
+                let startRowMoroIdx = 1;
+
+                for(let r = 0; r < rowsMoro.length; r++) {
+                    if(rowsMoro[r] && rowsMoro[r].c) {
+                        let lineValues = rowsMoro[r].c.map(cell => cell ? getVal(cell).trim().toUpperCase() : '');
+                        if(lineValues.includes('DNI') && lineValues.includes('ALUMNO')) {
+                            idxMoroNum = lineValues.indexOf('#') !== -1 ? lineValues.indexOf('#') : 0;
+                            idxMoroDni = lineValues.indexOf('DNI');
+                            idxMoroAlumno = lineValues.indexOf('ALUMNO');
+                            idxMoroCorte = lineValues.indexOf('CORTE');
+                            idxMoroTutor = lineValues.indexOf('TUTOR');
+                            idxMoroCondicion = lineValues.indexOf('CONDICIÓN PAGO') !== -1 ? lineValues.indexOf('CONDICIÓN PAGO') : lineValues.findIndex(v => v.includes('CONDI'));
+                            idxMoroMotivos = lineValues.indexOf('MOTIVOS');
+                            startRowMoroIdx = r + 1;
+                            break;
+                        }
+                    }
+                }
+
                 moroDataCached = [];
-                
-                for(let j = 1; j < rowsMoro.length; j++) {
+                for(let j = startRowMoroIdx; j < rowsMoro.length; j++) {
                     const row = rowsMoro[j];
-                    if(!row || !row.c || !row.c[1]) continue;
+                    if(!row || !row.c || !row.c[idxMoroDni]) continue;
 
                     moroDataCached.push({
-                        num: getVal(row.c[0]),
-                        dni: getVal(row.c[1]),
-                        alumno: getVal(row.c[2]),
-                        corte: getVal(row.c[3]),
-                        tutor: getVal(row.c[4]).trim(),
-                        condicion: getVal(row.c[5]),
-                        motivos: getVal(row.c[6])
+                        num: getVal(row.c[idxMoroNum]),
+                        dni: getVal(row.c[idxMoroDni]),
+                        alumno: getVal(row.c[idxMoroAlumno]),
+                        corte: getVal(row.c[idxMoroCorte]),
+                        tutor: getVal(row.c[idxMoroTutor]).trim(),
+                        condicion: getVal(row.c[idxMoroCondicion]),
+                        motivos: row.c[idxMoroMotivos] ? getVal(row.c[idxMoroMotivos]) : ''
                     });
                 }
                 renderMoroTable(moroDataCached);
 
-                // 3. GENERAR LISTA DE TUTORES ÚNICOS PARA EL FILTRO DINÁMICO
+                // 3. POPOULAR FILTROS DE LA HOJA DE TRANSICIÓN
                 populateTutorDropdown();
-
                 renderCharts(cachedDesercionRows, complianceNum);
                 document.getElementById('error-box').className = 'hidden';
 
@@ -505,17 +549,14 @@
             renderMoroTable(filtered);
         }
 
-        // CONTROLADOR HOJA DE TRANSICIÓN: POPOULAR SELECTOR DE TUTORES ÚNICOS
         function populateTutorDropdown() {
             const select = document.getElementById('tutor-select-filter');
             const currentSelection = select.value;
             
-            // Obtener nombres únicos combinando ambas fuentes
             let tutorsSet = new Set();
-            cachedDesercionRows.forEach(r => { if(r.tutor) tutorsSet.add(r.tutor); });
-            moroDataCached.forEach(m => { if(m.tutor) tutorsSet.add(m.tutor); });
+            moroDataCached.forEach(m => { if(m.tutor && isNaN(m.tutor)) tutorsSet.add(m.tutor); });
+            cachedDesercionRows.forEach(r => { if(r.tutor && isNaN(r.tutor)) tutorsSet.add(r.tutor); });
 
-            // Limpiar y repopular
             select.innerHTML = '<option value="">-- Seleccionar Tutor --</option>';
             Array.from(tutorsSet).sort().forEach(tutorName => {
                 const opt = document.createElement('option');
@@ -529,7 +570,6 @@
             }
         }
 
-        // LOGICA DE FILTRADO COMPLETO POR TUTOR (TRANSICIÓN DINÁMICA)
         function onTutorFilterChange() {
             const selectedTutor = document.getElementById('tutor-select-filter').value;
             const metricsContainer = document.getElementById('tutor-filtered-metrics');
@@ -537,13 +577,13 @@
 
             if(!selectedTutor) {
                 metricsContainer.classList.add('hidden');
-                tbodyFiltered.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500 italic">Por favor, selecciona un tutor del menú desplegable superior.</td></tr>`;
+                tbodyFiltered.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500 italic">Por favor, selecciona un tutor del menú desplegable superior.</td></tr>`;
                 return;
             }
 
-            // 1. Calcular métricas resumidas aisladas del tutor elegido
+            // 1. Métricas aisladas dinámicas por Tutor
             let tMat = 0, tPag = 0, tDes = 0;
-            let tutorRows = cachedDesercionRows.filter(r => r.tutor === selectedTutor);
+            let tutorRows = cachedDesercionRows.filter(r => r.tutor.toLowerCase() === selectedTutor.toLowerCase());
             
             tutorRows.forEach(r => {
                 tMat += r.matriculados;
@@ -559,12 +599,12 @@
             document.getElementById('f-tutor-cum').innerText = Math.round(tCum) + '%';
             metricsContainer.classList.remove('hidden');
 
-            // 2. Filtrar alumnos morosos específicos de este tutor
-            let filteredStudents = moroDataCached.filter(m => m.tutor === selectedTutor);
+            // 2. Alumnos específicos sin perder registros
+            let filteredStudents = moroDataCached.filter(m => m.tutor.toLowerCase() === selectedTutor.toLowerCase());
             tbodyFiltered.innerHTML = '';
 
             if(filteredStudents.length === 0) {
-                tbodyFiltered.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-emerald-400/70 font-medium bg-emerald-500/5">🎉 ¡Excelente! Este tutor no registra alumnos con deudas o alertas pendientes.</td></tr>`;
+                tbodyFiltered.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-emerald-400/70 font-medium bg-emerald-500/5">🎉 ¡Excelente! Este tutor no registra alumnos con alertas o condiciones pendientes.</td></tr>`;
             } else {
                 filteredStudents.forEach(row => {
                     let badgeClass = "bg-slate-800 text-slate-300";
@@ -574,6 +614,7 @@
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-slate-800/30 transition-colors border-b border-slate-800/40";
                     tr.innerHTML = `
+                        <td class="py-3 px-4 font-bold text-slate-500">${row.num}</td>
                         <td class="py-3 px-4 font-mono text-slate-400">${row.dni}</td>
                         <td class="py-3 px-4 font-bold text-slate-100">${row.alumno}</td>
                         <td class="py-3 px-4 text-center text-slate-400">${row.corte}</td>
@@ -593,31 +634,56 @@
             thead.innerHTML = '';
             tbody.innerHTML = '';
 
-            const headRow = rows[3];
-            if(!headRow || !headRow.c) return;
+            let cuotasHeaderRowIdx = -1;
+            let idxCuotaCol = -1;
 
-            for(let c = 12; c <= 21; c++) {
+            for(let r = 0; r < rows.length; r++) {
+                if(rows[r] && rows[r].c) {
+                    for(let c = 0; c < rows[r].c.length; c++) {
+                        if(rows[r].c[c] && getVal(rows[r].c[c]).trim().toUpperCase() === 'CUOTA') {
+                            cuotasHeaderRowIdx = r;
+                            idxCuotaCol = c;
+                            break;
+                        }
+                    }
+                }
+                if(cuotasHeaderRowIdx !== -1) break;
+            }
+
+            if(cuotasHeaderRowIdx === -1) return;
+
+            const hRow = rows[cuotasHeaderRowIdx];
+            let maxCols = hRow.c.length;
+            
+            for(let c = idxCuotaCol; c < maxCols; c++) {
+                if(!hRow.c[c]) continue;
+                let val = getVal(hRow.c[c]).trim();
+                if(!val) break;
                 const th = document.createElement('th');
                 th.className = "py-3.5 px-4";
-                th.innerText = headRow.c[c] ? getVal(headRow.c[c]) : '';
+                th.innerText = val;
                 thead.appendChild(th);
             }
 
-            for(let r = 4; r <= 10; r++) {
+            for(let r = cuotasHeaderRowIdx + 1; r < rows.length; r++) {
                 const row = rows[r];
-                if(!row || !row.c || !row.c[12]) continue;
+                if(!row || !row.c || !row.c[idxCuotaCol]) break;
+                
+                let cuotaNum = getVal(row.c[idxCuotaCol]).trim();
+                if(!cuotaNum || isNaN(cuotaNum)) {
+                    if(cuotaNum.toUpperCase().includes("TOTAL")) continue;
+                    break;
+                }
 
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-800/30 transition-colors border-b border-slate-800/40";
                 
-                let htmlStr = '';
-                for(let c = 12; c <= 21; c++) {
-                    let cellVal = row.c[c] ? getVal(row.c[c]) : '';
-                    if(c === 12) {
-                        htmlStr += `<td class="py-3 px-4 font-bold text-indigo-400">Cuota ${cellVal}</td>`;
-                    } else {
-                        htmlStr += `<td class="py-3 px-4 text-slate-300 font-mono">${cellVal || '-'}</td>`;
-                    }
+                let htmlStr = `<td class="py-3 px-4 font-bold text-indigo-400">Cuota ${cuotaNum}</td>`;
+                let headerCells = thead.querySelectorAll('th');
+                for(let i = 1; i < headerCells.length; i++) {
+                    let currentColIdx = idxCuotaCol + i;
+                    let cellVal = row.c[currentColIdx] ? getVal(row.c[currentColIdx]).trim() : '';
+                    htmlStr += `<td class="py-3 px-4 text-slate-300 font-mono">${cellVal || '-'}</td>`;
                 }
                 tr.innerHTML = htmlStr;
                 tbody.appendChild(tr);
