@@ -357,42 +357,6 @@
                 const tableData = await fetchSheetData(SHEET_JSON_URL);
                 const rows = tableData.rows;
 
-                // ESCÁNER MATRICIAL DE COORDENADAS UNIFICADO
-                let idxCiclo = 1, idxTutor = 2, idxMat = 3, idxPag = 4, idxSus = 5, idxDes = 6, idxCum = 7, idxNot = 8;
-                let idxCuotaCol = 12;
-                let idxMoroNum = 24, idxMoroDni = 25, idxMoroAlumno = 26, idxMoroCorte = 27, idxMoroTutor = 28, idxMoroCond = 29, idxMoroMotiv = 30;
-
-                for (let i = 0; i < Math.min(rows.length, 10); i++) {
-                    if (!rows[i] || !rows[i].c) continue;
-                    let labels = rows[i].c.map(cell => safeString(cell).toUpperCase());
-                    
-                    let pos = labels.indexOf('CICLO');
-                    if (pos !== -1 && pos < 4) {
-                        idxCiclo = pos;
-                        idxTutor = labels.indexOf('TUTO') !== -1 ? labels.indexOf('TUTO') : pos + 1;
-                        idxMat = labels.indexOf('MAT') !== -1 ? labels.indexOf('MAT') : pos + 2;
-                        idxPag = labels.indexOf('PAG') !== -1 ? labels.indexOf('PAG') : pos + 3;
-                        idxSus = labels.indexOf('SUS') !== -1 ? labels.indexOf('SUS') : pos + 4;
-                        idxDes = labels.indexOf('DES') !== -1 ? labels.indexOf('DES') : pos + 5;
-                        idxCum = labels.indexOf('CUM') !== -1 ? labels.indexOf('CUM') : pos + 6;
-                        idxNot = labels.indexOf('NOT') !== -1 ? labels.indexOf('NOT') : pos + 7;
-                    }
-                    let qIdx = labels.indexOf('CUOTA');
-                    if (qIdx !== -1) idxCuotaCol = qIdx;
-
-                    let dIdx = labels.indexOf('DNI');
-                    if (dIdx !== -1 && dIdx > 15) {
-                        idxMoroDni = dIdx;
-                        idxMoroNum = labels.indexOf('#') !== -1 ? labels.indexOf('#') : dIdx - 1;
-                        idxMoroAlumno = labels.indexOf('ALUMNO') !== -1 ? labels.indexOf('ALUMNO') : dIdx + 1;
-                        idxMoroCorte = labels.indexOf('CORTE') !== -1 ? labels.indexOf('CORTE') : dIdx + 2;
-                        idxMoroTutor = labels.indexOf('TUTOR') !== -1 ? labels.indexOf('TUTOR') : dIdx + 3;
-                        let condIdx = labels.findIndex(v => v.includes('CONDI') || v.includes('PAGO'));
-                        idxMoroCond = condIdx !== -1 ? condIdx : dIdx + 4;
-                        idxMoroMotiv = labels.indexOf('MOTIVOS') !== -1 ? labels.indexOf('MOTIVOS') : dIdx + 5;
-                    }
-                }
-
                 cachedDesercionRows = [];
                 moroDataCached = [];
                 let cuotasHeaders = [];
@@ -401,78 +365,78 @@
                 let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 95;
                 let desDataStarted = false;
 
-                // Capturar cabeceras de cuotas de pagos
-                let cuotasHeaderRow = rows.find(r => r && r.c && safeString(r.c[idxCuotaCol]).toUpperCase() === 'CUOTA');
-                if (cuotasHeaderRow) {
-                    for (let c = idxCuotaCol; c < cuotasHeaderRow.c.length; c++) {
-                        let hVal = safeString(cuotasHeaderRow.c[c]);
-                        if (!hVal) break;
-                        cuotasHeaders.push(hVal);
+                // Capturar cabeceras fijas de las cuotas (M4:V4)
+                if (rows[3] && rows[3].c) {
+                    for (let c = 12; c <= 21; c++) {
+                        let hVal = safeString(rows[3].c[c]);
+                        if (hVal) cuotasHeaders.push(hVal);
                     }
                 }
 
+                // PROCESAMIENTO MATRICIAL EN PARALELO SIN ERRORES DE CRUCE
                 for (let i = 0; i < rows.length; i++) {
                     const row = rows[i];
                     if (!row || !row.c) continue;
 
-                    // 1. Mapeo de Deserción
-                    let cicloVal = safeString(row.c[idxCiclo]);
-                    if (cicloVal.toUpperCase() === 'CICLO') {
-                        desDataStarted = true;
-                        continue;
-                    }
-                    if (desDataStarted) {
-                        if (cicloVal.toUpperCase().includes('TOTAL')) {
-                            totalMat = getVal(row.c[idxMat], true);
-                            totalPag = getVal(row.c[idxPag], true);
-                            totalDes = getVal(row.c[idxSus], true);
-                            
-                            if (row.c[idxCum]) {
-                                let v = row.c[idxCum].v;
-                                totalCum = (typeof v === 'number' && v <= 1) ? v * 100 : parseFloat(v) || 95;
+                    // 1. Extracción de Deserción por Ciclo (B3:J15)
+                    if (row.c[2]) {
+                        let cicloVal = safeString(row.c[2]);
+                        if (cicloVal.toUpperCase() === 'CICLO') {
+                            desDataStarted = true;
+                            continue;
+                        }
+                        if (desDataStarted || (cicloVal !== '' && !cicloVal.toUpperCase().includes('VENCIMIENTO'))) {
+                            if (cicloVal.toUpperCase() === 'TOTAL' || cicloVal.toUpperCase() === 'TOTALES') {
+                                totalMat = getVal(row.c[4], true);
+                                totalPag = getVal(row.c[5], true);
+                                totalDes = getVal(row.c[6], true);
+                                if (row.c[8]) {
+                                    let v = row.c[8].v;
+                                    totalCum = (typeof v === 'number' && v <= 1) ? v * 100 : parseFloat(v) || 95;
+                                }
+                                desDataStarted = false; // Bloqueo de seguridad
+                            } else {
+                                cachedDesercionRows.push({
+                                    ciclo: cicloVal,
+                                    tutor: safeString(row.c[3]),
+                                    matriculados: getVal(row.c[4], true),
+                                    pagantes: getVal(row.c[5], true),
+                                    suspendidos: getVal(row.c[6], true),
+                                    desercion: safePercent(row.c[7]),
+                                    cumplimiento: safePercent(row.c[8]),
+                                    nota: safeString(row.c[9])
+                                });
                             }
-                            desDataStarted = false; 
-                        } else if (cicloVal !== '' && !cicloVal.toUpperCase().includes('VENCIMIENTO')) {
-                            cachedDesercionRows.push({
-                                ciclo: cicloVal,
-                                tutor: safeString(row.c[idxTutor]),
-                                matriculados: getVal(row.c[idxMat], true),
-                                pagantes: getVal(row.c[idxPag], true),
-                                suspendidos: getVal(row.c[idxSus], true),
-                                desercion: safePercent(row.c[idxDes]),
-                                cumplimiento: safePercent(row.c[idxCum]),
-                                nota: safeString(row.c[idxNot])
-                            });
                         }
                     }
 
-                    // 2. Mapeo de Alumnos Alertas / Morosos (Y2:AE1000)
-                    let moroDniVal = safeString(row.c[idxMoroDni]);
-                    let moroAlumnoVal = safeString(row.c[idxMoroAlumno]);
+                    // 2. Extracción de Morosidad (Y3:AE11)
+                    let moroDniVal = safeString(row.c[25]); // Columna Z
+                    let moroAlumnoVal = safeString(row.c[26]); // Columna AA
                     if (moroDniVal && moroDniVal.toUpperCase() !== 'DNI' && moroAlumnoVal) {
                         moroDataCached.push({
-                            num: row.c[idxMoroNum] ? safeString(row.c[idxMoroNum]) : (moroDataCached.length + 1),
+                            num: row.c[24] ? safeString(row.c[24]) : (moroDataCached.length + 1),
                             dni: moroDniVal,
                             alumno: moroAlumnoVal,
-                            corte: safeString(row.c[idxMoroCorte]),
-                            tutor: safeString(row.c[idxMoroTutor]),
-                            condicion: safeString(row.c[idxMoroCond]),
-                            motivos: safeString(row.c[idxMoroMotiv])
+                            corte: safeString(row.c[27]),
+                            tutor: safeString(row.c[28]),
+                            condicion: safeString(row.c[29]),
+                            motivos: safeString(row.c[30])
                         });
                     }
 
-                    // 3. Mapeo de Filas del Cronograma de Cuotas
-                    let cuotaCell = safeString(row.c[idxCuotaCol]);
-                    if (cuotaCell && !isNaN(cuotaCell) && cuotasHeaders.length > 0 && cuotasHeaderRow && i > rows.indexOf(cuotasHeaderRow)) {
+                    // 3. Extracción de Cronograma de Cuotas (M5:V11)
+                    let cuotaCell = safeString(row.c[12]); // Columna M
+                    if (cuotaCell && !isNaN(cuotaCell) && cuotasHeaders.length > 0 && i >= 4) {
                         let cells = [];
                         for (let k = 0; k < cuotasHeaders.length; k++) {
-                            cells.push(safeString(row.c[idxCuotaCol + k]) || '-');
+                            cells.push(safeString(row.c[12 + k]) || '-');
                         }
                         cuotasBodyRows.push(cells);
                     }
                 }
 
-                // Renderizar KPI Globales exactos (95%)
+                // Pintar KPIs globales
                 document.getElementById('lbl-total-mat').innerText = Math.round(totalMat);
                 document.getElementById('lbl-total-pag').innerText = Math.round(totalPag);
                 document.getElementById('lbl-total-des').innerText = Math.round(totalDes);
