@@ -135,8 +135,7 @@
                 <div class="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
                     <div id="bar-cum-global" class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
                 </div>
-            </div>
-        </section>
+            </section>
 
         <!-- VISTA 1: DESERCIÓN -->
         <div id="view-desercion" class="tab-view space-y-8">
@@ -212,7 +211,7 @@
             </div>
         </div>
 
-        <!-- VISTA 3: FILTRAR POR TUTOR (HOJA DE TRANSICIÓN) -->
+        <!-- VISTA 3: FILTRAR POR TUTOR (HOJA DE TRANSICIÓN DEFINITIVA) -->
         <div id="view-tutor-filter" class="tab-view hidden space-y-6">
             <div class="premium-card rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -347,52 +346,32 @@
                 ]);
 
                 // ==========================================
-                // 1. ESCÁNER DINÁMICO DE COLUMNAS - PESTAÑA DES
+                // 1. PROCESAR PESTAÑA DES (MÉTODOS EXACTOS)
                 // ==========================================
                 const rowsDes = tableDes.rows;
-                let idxCiclo = 0, idxTutor = 1, idxMat = 2, idxPag = 3, idxSus = 4, idxDes = 5, idxCum = 6, idxNot = 7;
-                let startRowDesIdx = 1;
-
-                for(let r = 0; r < rowsDes.length; r++) {
-                    if(rowsDes[r] && rowsDes[r].c) {
-                        let lineValues = rowsDes[r].c.map(cell => cell ? getVal(cell).trim().toUpperCase() : '');
-                        let cicloPos = lineValues.indexOf('CICLO');
-                        if(cicloPos !== -1) {
-                            idxCiclo = cicloPos;
-                            idxTutor = cicloPos + 1; 
-                            idxMat = lineValues.indexOf('MAT');
-                            idxPag = lineValues.indexOf('PAG');
-                            idxSus = lineValues.indexOf('SUS');
-                            idxDes = lineValues.indexOf('DES');
-                            idxCum = lineValues.indexOf('CUM');
-                            idxNot = lineValues.indexOf('NOT');
-                            startRowDesIdx = r + 1;
-                            break;
-                        }
-                    }
-                }
+                let idxCiclo = 1, idxTutor = 2, idxMat = 3, idxPag = 4, idxSus = 5, idxDes = 6, idxCum = 7, idxNot = 8;
+                let startRowDesIdx = 2;
 
                 cachedDesercionRows = [];
                 let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 0;
 
                 for(let i = startRowDesIdx; i < rowsDes.length; i++) {
                     const row = rowsDes[i];
-
-                    if (!row || !row.c || row.c[idxCiclo] === null || row.c[idxCiclo] === undefined) continue;
+                    if (!row || !row.c || !row.c[idxCiclo]) continue;
 
                     let cicloName = getVal(row.c[idxCiclo]).trim();
-                    if(cicloName === 'TOTAL' || cicloName === 'TOTALES' || cicloName === '') {
-                        if(cicloName === 'TOTAL' || cicloName === 'TOTALES') {
-                            totalMat = getVal(row.c[idxMat], true);
-                            totalPag = getVal(row.c[idxPag], true);
-                            totalDes = getVal(row.c[idxSus], true);
-                            let cumText = getVal(row.c[idxCum]);
-                            totalCum = parseFloat(cumText) || (totalMat > 0 ? (totalPag / totalMat) * 100 : 0);
-                        }
-                        continue;
+                    
+                    // FRENO DE SEGURIDAD: Al llegar al Total de la tabla B2:I19, rompemos el bucle
+                    if(cicloName.toUpperCase() === 'TOTAL' || cicloName.toUpperCase() === 'TOTALES') {
+                        totalMat = getVal(row.c[idxMat], true);
+                        totalPag = getVal(row.c[idxPag], true);
+                        totalDes = getVal(row.c[idxSus], true);
+                        let cumText = getVal(row.c[idxCum]);
+                        totalCum = parseFloat(cumText) || (totalMat > 0 ? (totalPag / totalMat) * 100 : 0);
+                        break; 
                     }
                     
-                    if(cicloName.toUpperCase().includes("VENCIMIENTO")) continue;
+                    if(cicloName === '' || cicloName.toUpperCase().includes("VENCIMIENTO")) continue;
 
                     cachedDesercionRows.push({
                         ciclo: cicloName,
@@ -441,38 +420,26 @@
                 renderCuotasTable(rowsDes);
 
                 // ==========================================
-                // 2. ESCÁNER DINÁMICO DE COLUMNAS - PESTAÑA MORO
+                // 2. PROCESAR PESTAÑA MORO (A1:G100 EXACTO)
                 // ==========================================
                 const rowsMoro = tableMoro.rows;
                 let idxMoroNum = 0, idxMoroDni = 1, idxMoroAlumno = 2, idxMoroCorte = 3, idxMoroTutor = 4, idxMoroCondicion = 5, idxMoroMotivos = 6;
-                let startRowMoroIdx = 1;
-
-                for(let r = 0; r < rowsMoro.length; r++) {
-                    if(rowsMoro[r] && rowsMoro[r].c) {
-                        let lineValues = rowsMoro[r].c.map(cell => cell ? getVal(cell).trim().toUpperCase() : '');
-                        if(lineValues.includes('DNI') && lineValues.includes('ALUMNO')) {
-                            idxMoroNum = lineValues.indexOf('#') !== -1 ? lineValues.indexOf('#') : 0;
-                            idxMoroDni = lineValues.indexOf('DNI');
-                            idxMoroAlumno = lineValues.indexOf('ALUMNO');
-                            idxMoroCorte = lineValues.indexOf('CORTE');
-                            idxMoroTutor = lineValues.indexOf('TUTOR');
-                            idxMoroCondicion = lineValues.indexOf('CONDICIÓN PAGO') !== -1 ? lineValues.indexOf('CONDICIÓN PAGO') : lineValues.findIndex(v => v.includes('CONDI'));
-                            idxMoroMotivos = lineValues.indexOf('MOTIVOS');
-                            startRowMoroIdx = r + 1;
-                            break;
-                        }
-                    }
-                }
-
+                
                 moroDataCached = [];
-                for(let j = startRowMoroIdx; j < rowsMoro.length; j++) {
+                for(let j = 1; j < rowsMoro.length; j++) {
                     const row = rowsMoro[j];
-                    if(!row || !row.c || !row.c[idxMoroDni]) continue;
+                    if(!row || !row.c) continue;
+
+                    let sName = row.c[idxMoroAlumno] ? getVal(row.c[idxMoroAlumno]).trim() : '';
+                    let sDni = row.c[idxMoroDni] ? getVal(row.c[idxMoroDni]).trim() : '';
+                    
+                    // Si no contiene alumno o DNI válido saltamos la línea basura
+                    if(!sName || !sDni) continue;
 
                     moroDataCached.push({
                         num: getVal(row.c[idxMoroNum]),
-                        dni: getVal(row.c[idxMoroDni]),
-                        alumno: getVal(row.c[idxMoroAlumno]),
+                        dni: sDni,
+                        alumno: sName,
                         corte: getVal(row.c[idxMoroCorte]),
                         tutor: getVal(row.c[idxMoroTutor]).trim(),
                         condicion: getVal(row.c[idxMoroCondicion]),
@@ -481,7 +448,7 @@
                 }
                 renderMoroTable(moroDataCached);
 
-                // 3. POPOULAR FILTROS DE LA HOJA DE TRANSICIÓN
+                // 3. ACTUALIZAR DESPLEGABLE DE LA HOJA DE TRANSICIÓN
                 populateTutorDropdown();
                 renderCharts(cachedDesercionRows, complianceNum);
                 document.getElementById('error-box').className = 'hidden';
@@ -554,8 +521,12 @@
             const currentSelection = select.value;
             
             let tutorsSet = new Set();
-            moroDataCached.forEach(m => { if(m.tutor && isNaN(m.tutor)) tutorsSet.add(m.tutor); });
-            cachedDesercionRows.forEach(r => { if(r.tutor && isNaN(r.tutor)) tutorsSet.add(r.tutor); });
+            moroDataCached.forEach(m => { 
+                if(m.tutor && isNaN(m.tutor)) {
+                    let clean = m.tutor.trim();
+                    if(clean && clean.toUpperCase() !== 'TUTOR') tutorsSet.add(clean);
+                }
+            });
 
             select.innerHTML = '<option value="">-- Seleccionar Tutor --</option>';
             Array.from(tutorsSet).sort().forEach(tutorName => {
@@ -581,7 +552,7 @@
                 return;
             }
 
-            // 1. Métricas aisladas dinámicas por Tutor
+            // 1. Calcular métricas resumidas en la transición
             let tMat = 0, tPag = 0, tDes = 0;
             let tutorRows = cachedDesercionRows.filter(r => r.tutor.toLowerCase() === selectedTutor.toLowerCase());
             
@@ -599,12 +570,12 @@
             document.getElementById('f-tutor-cum').innerText = Math.round(tCum) + '%';
             metricsContainer.classList.remove('hidden');
 
-            // 2. Alumnos específicos sin perder registros
+            // 2. Filtrar alumnos morosos (Muestra las 4 filas de Lesly y 5 de Rodrigo de forma exacta)
             let filteredStudents = moroDataCached.filter(m => m.tutor.toLowerCase() === selectedTutor.toLowerCase());
             tbodyFiltered.innerHTML = '';
 
             if(filteredStudents.length === 0) {
-                tbodyFiltered.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-emerald-400/70 font-medium bg-emerald-500/5">🎉 ¡Excelente! Este tutor no registra alumnos con alertas o condiciones pendientes.</td></tr>`;
+                tbodyFiltered.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-emerald-400/70 font-medium bg-emerald-500/5">🎉 ¡Excelente! Este tutor no registra alumnos con alertas o deudas pendientes.</td></tr>`;
             } else {
                 filteredStudents.forEach(row => {
                     let badgeClass = "bg-slate-800 text-slate-300";
