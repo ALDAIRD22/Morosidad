@@ -186,7 +186,7 @@
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-slate-800/80 pb-4">
                     <div>
                         <h3 class="text-lg font-bold text-white tracking-tight">👥 Estudiantes en Estado de Alerta / Deudores</h3>
-                        <p class="text-xs text-slate-400 mt-1">Lista completa procesada desde la pestaña MORO</p>
+                        <p class="text-xs text-slate-400 mt-1">Lista completa procesada desde la pestaña MORO (A1:G1000)</p>
                     </div>
                     <div>
                         <input type="text" id="search-moro" oninput="filterMoroTable()" placeholder="Buscar alumno o tutor..." class="bg-slate-950/60 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full md:w-64 focus:outline-none focus:border-indigo-500 transition-colors">
@@ -217,7 +217,7 @@
             <div class="premium-card rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h3 class="text-lg font-bold text-white tracking-tight">🔍 Buscador y Filtro Dinámico por Tutor</h3>
-                    <p class="text-xs text-slate-400 mt-1">Selecciona un tutor para aislar sus métricas y su lista de alumnos asignados.</p>
+                    <p class="text-xs text-slate-400 mt-1">Selecciona un tutor para aislar sus métricas y ver sus deudores de la hoja MORO.</p>
                 </div>
                 <div>
                     <select id="tutor-select-filter" onchange="onTutorFilterChange()" class="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full sm:w-64 focus:outline-none focus:border-indigo-500 transition-colors font-semibold">
@@ -248,7 +248,7 @@
 
             <!-- Tabla de Alumnos asignados al Tutor Filtrado -->
             <div class="premium-card rounded-2xl p-6 shadow-xl">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Alumnos Asociados al Tutor Seleccionado</h3>
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Alumnos con Alertas Extraídos de la hoja MORO</h3>
                 <div class="w-full overflow-x-auto">
                     <table class="w-full text-left border-collapse text-xs">
                         <thead>
@@ -276,7 +276,7 @@
             <div class="premium-card rounded-2xl p-6 shadow-xl">
                 <div class="mb-5 border-b border-slate-800/80 pb-3">
                     <h3 class="text-lg font-bold text-white tracking-tight">📅 Cronograma General de Cuotas de Pagos</h3>
-                    <p class="text-xs text-slate-400 mt-1">Fechas límite estipuladas para el control de los vencimientos institucionales</p>
+                    <p class="text-xs text-slate-400 mt-1">Fechas límite estipuladas para el control de los vencimientos institucionales (L2:W12)</p>
                 </div>
                 <div class="w-full overflow-x-auto">
                     <table class="w-full text-left border-collapse text-xs">
@@ -366,7 +366,7 @@
                 let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 0;
                 let desDataStarted = false;
 
-                for(let i = 0; i < rowsDes.length; i++) {
+                for(let i = startRowDesIdx; i < rowsDes.length; i++) {
                     const row = rowsDes[i];
                     if (!row || !row.c) continue;
 
@@ -437,12 +437,12 @@
                 renderCuotasTable(rowsDes);
 
                 // ==========================================
-                // 2. PROCESAR PESTAÑA MORO (A1:G1000 DINÁMICO)
+                // 2. PROCESAR PESTAÑA MORO (A1:G1000 DINÁMICO COMPLETAMENTE)
                 // ==========================================
                 const rowsMoro = tableMoro.rows;
                 let idxMoroNum = 0, idxMoroDni = 1, idxMoroAlumno = 2, idxMoroCorte = 3, idxMoroTutor = 4, idxMoroCondicion = 5, idxMoroMotivos = 6;
+                let startRowMoroIdx = 1;
 
-                // Buscador dinámico de columnas en MORO
                 for (let i = 0; i < Math.min(rowsMoro.length, 5); i++) {
                     if (!rowsMoro[i] || !rowsMoro[i].c) continue;
                     let labels = rowsMoro[i].c.map(cell => cell ? getVal(cell).trim().toUpperCase() : '');
@@ -455,21 +455,21 @@
                         idxMoroCondicion = condIdx !== -1 ? condIdx : 5;
                         idxMoroMotivos = labels.indexOf('MOTIVOS') !== -1 ? labels.indexOf('MOTIVOS') : 6;
                         idxMoroNum = labels.indexOf('#') !== -1 ? labels.indexOf('#') : 0;
+                        startRowMoroIdx = i + 1;
                         break;
                     }
                 }
 
                 moroDataCached = [];
-                for(let j = 0; j < rowsMoro.length; j++) {
+                for(let j = startRowMoroIdx; j < rowsMoro.length; j++) {
                     const row = rowsMoro[j];
                     if(!row || !row.c) continue;
 
                     let cellDni = row.c[idxMoroDni] ? getVal(row.c[idxMoroDni]).trim() : '';
                     let cellAlumno = row.c[idxMoroAlumno] ? getVal(row.c[idxMoroAlumno]).trim() : '';
                     
-                    // Saltamos la fila si coincide exactamente con la cabecera
                     if(cellDni.toUpperCase() === 'DNI' || cellAlumno.toUpperCase() === 'ALUMNO') continue;
-                    if(!cellDni && !cellAlumno) continue; // Salta celdas vacías
+                    if(!cellDni && !cellAlumno) continue; 
 
                     moroDataCached.push({
                         num: row.c[idxMoroNum] ? getVal(row.c[idxMoroNum]).trim() : (moroDataCached.length + 1),
@@ -483,6 +483,9 @@
                 }
                 renderMoroTable(moroDataCached);
 
+                // ==========================================
+                // 3. ENLAZAR DESPLEGABLE DE TUTORES DE MORO
+                // ==========================================
                 populateTutorDropdown();
                 renderCharts(cachedDesercionRows, complianceNum);
                 document.getElementById('error-box').className = 'hidden';
@@ -550,6 +553,7 @@
             renderMoroTable(filtered);
         }
 
+        // SE RECONECTÓ EL FILTRO DE TUTORES CON LA PESTAÑA MORO EXCLUSIVAMENTE
         function populateTutorDropdown() {
             const select = document.getElementById('tutor-select-filter');
             const currentSelection = select.value;
@@ -603,6 +607,7 @@
             document.getElementById('f-tutor-cum').innerText = Math.round(tCum) + '%';
             metricsContainer.classList.remove('hidden');
 
+            // Extracción exacta de las 4 filas de Lesly y 5 de Rodrigo directamente desde MORO cached
             let filteredStudents = moroDataCached.filter(m => m.tutor.toLowerCase() === selectedTutor.toLowerCase());
             tbodyFiltered.innerHTML = '';
 
@@ -631,9 +636,9 @@
             }
         }
 
-        // ========================================================
-        // 3. ENRUTADOR INMUNE A FALLOS PARA EL CRONOGRAMA (L2:W12)
-        // ========================================================
+        // ==========================================
+        // 4. CONTROLADOR CRONOGRAMA CORREGIDO (L2:W12)
+        // ==========================================
         function renderCuotasTable(rows) {
             const thead = document.getElementById('table-head-cuotas');
             const tbody = document.getElementById('table-body-cuotas');
@@ -643,12 +648,12 @@
             let rHead = -1;
             let cHead = -1;
 
-            // Escáner dinámico por texto exacto usando la función de limpieza nativa getVal()
+            // Localizar coordenadas seguras por texto
             for (let r = 0; r < rows.length; r++) {
                 if (rows[r] && rows[r].c) {
                     for (let c = 0; c < rows[r].c.length; c++) {
-                        if (rows[r].c[c]) {
-                            let txt = getVal(rows[r].c[c]).trim().toUpperCase();
+                        if (rows[r].c[c] && rows[r].c[c].v) {
+                            let txt = rows[r].c[c].v.toString().trim().toUpperCase();
                             if (txt === 'CUOTA') {
                                 rHead = r;
                                 cHead = c;
@@ -666,7 +671,8 @@
             let rowHeader = rows[rHead];
             
             for (let c = cHead; c < rowHeader.c.length; c++) {
-                let val = rowHeader.c[c] ? getVal(rowHeader.c[c]).trim() : '';
+                if(!rowHeader.c[c]) break;
+                let val = getVal(rowHeader.c[c]).trim();
                 if (!val) break; 
                 headers.push(val);
                 const th = document.createElement('th');
