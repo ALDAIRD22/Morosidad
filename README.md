@@ -185,7 +185,7 @@
             <div class="premium-card rounded-2xl p-6 shadow-xl">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-slate-800/80 pb-4">
                     <div>
-                        <h3 class="text-lg font-bold text-white tracking-tight">👥 Estudiantes en State de Alerta / Deudores</h3>
+                        <h3 class="text-lg font-bold text-white tracking-tight">👥 Estudiantes en Estado de Alerta / Deudores</h3>
                         <p class="text-xs text-slate-400 mt-1">Control integral de cartera vencida y condiciones comerciales</p>
                     </div>
                     <div>
@@ -325,13 +325,13 @@
             if (cell.v !== null && cell.v !== undefined) {
                 let num = parseFloat(cell.v);
                 if (!isNaN(num)) {
-                    if (num > -1 && num <= 1) {
+                    if (num <= 1.0001 && num >= -0.0001) {
                         return (num * 100).toFixed(1) + '%';
                     }
                     return num.toFixed(1) + '%';
                 }
             }
-            return '0%';
+            return '0.0%';
         }
 
         function switchTab(targetId) {
@@ -357,40 +357,32 @@
                 const tableData = await fetchSheetData(SHEET_JSON_URL);
                 const rows = tableData.rows;
 
-                let colCiclo = 1, colTutor = 2, colMat = 3, colPag = 4, colSus = 5, colDes = 6, colCum = 7, colNot = 8;
-                let colCuota = 12;
-                let colMoroNum = 24, colMoroDni = 25, colMoroAlumno = 26, colMoroCorte = 27, colMoroTutor = 28, colMoroCond = 29, colMoroMotiv = 30;
+                // LOCALIZADOR DINÁMICO DE ÍNDICES MATRICIAL ABSOLUTO
+                let idxCiclo = 1, idxTutor = 2, idxMat = 3, idxPag = 4, idxSus = 5, idxDes = 6, idxCum = 7, idxNot = 8;
+                let idxCuotaCol = 12;
+                let idxMoroNum = 24, idxMoroDni = 25, idxMoroAlumno = 26, idxMoroCorte = 27, idxMoroTutor = 28, idxMoroCond = 29, idxMoroMotiv = 30;
 
-                // Buscador automatizado matricial de cabeceras
-                for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                for (let i = 0; i < Math.min(rows.length, 6); i++) {
                     if (!rows[i] || !rows[i].c) continue;
-                    let labels = rows[i].c.map(cell => safeString(cell).toUpperCase());
+                    let line = rows[i].c.map(cell => safeString(cell).toUpperCase());
                     
-                    let pos = labels.indexOf('CICLO');
-                    if (pos !== -1 && pos < 4) {
-                        colCiclo = pos;
-                        colTutor = labels.indexOf('TUTO') !== -1 ? labels.indexOf('TUTO') : pos + 1;
-                        colMat = labels.indexOf('MAT') !== -1 ? labels.indexOf('MAT') : pos + 2;
-                        colPag = labels.indexOf('PAG') !== -1 ? labels.indexOf('PAG') : pos + 3;
-                        colSus = labels.indexOf('SUS') !== -1 ? labels.indexOf('SUS') : pos + 4;
-                        colDes = labels.indexOf('DES') !== -1 ? labels.indexOf('DES') : pos + 5;
-                        colCum = labels.indexOf('CUM') !== -1 ? labels.indexOf('CUM') : pos + 6;
-                        colNot = labels.indexOf('NOT') !== -1 ? labels.indexOf('NOT') : pos + 7;
+                    let cPos = line.indexOf('CICLO');
+                    if (cPos !== -1) {
+                        idxCiclo = cPos; idxTutor = cPos + 1; idxMat = cPos + 2; idxPag = cPos + 3;
+                        idxSus = cPos + 4; idxDes = cPos + 5; idxCum = cPos + 6; idxNot = cPos + 7;
                     }
-                    let qIdx = labels.indexOf('CUOTA');
-                    if (qIdx !== -1) colCuota = qIdx;
+                    let qPos = line.indexOf('CUOTA');
+                    if (qPos !== -1) idxCuotaCol = qPos;
 
-                    let dIdx = labels.indexOf('DNI');
-                    if (dIdx !== -1 && dIdx > 15) {
-                        colMoroDni = dIdx;
-                        colMoroNum = labels.indexOf('#') !== -1 ? labels.indexOf('#') : dIdx - 1;
-                        colMoroAlumno = labels.indexOf('ALUMNO') !== -1 ? labels.indexOf('ALUMNO') : dIdx + 1;
-                        colMoroCorte = labels.indexOf('CORTE') !== -1 ? labels.indexOf('CORTE') : dIdx + 2;
-                        colMoroTutor = labels.findIndex((v, idx) => idx > colMoroAlumno && v.includes('TUTOR'));
-                        if(colMoroTutor === -1) colMoroTutor = dIdx + 3;
-                        let condIdx = labels.findIndex(v => v.includes('CONDI') || v.includes('PAGO'));
-                        colMoroCond = condIdx !== -1 ? condIdx : dIdx + 4;
-                        colMoroMotiv = labels.indexOf('MOTIVOS') !== -1 ? labels.indexOf('MOTIVOS') : dIdx + 5;
+                    let dPos = line.indexOf('DNI');
+                    if (dPos !== -1) {
+                        idxMoroDni = dPos;
+                        idxMoroNum = line.indexOf('#') !== -1 ? line.indexOf('#') : dPos - 1;
+                        idxMoroAlumno = line.indexOf('ALUMNO') !== -1 ? line.indexOf('ALUMNO') : dPos + 1;
+                        idxMoroCorte = line.indexOf('CORTE') !== -1 ? line.indexOf('CORTE') : dPos + 2;
+                        idxMoroTutor = line.indexOf('TUTOR') !== -1 ? line.indexOf('TUTOR') : dPos + 3;
+                        idxMoroCond = line.findIndex(v => v.includes('CONDI') || v.includes('PAGO'));
+                        idxMoroMotiv = line.indexOf('MOTIVOS') !== -1 ? line.indexOf('MOTIVOS') : dPos + 5;
                     }
                 }
 
@@ -398,43 +390,37 @@
                 moroDataCached = [];
                 let cuotasHeaders = [];
                 let cuotasBodyRows = [];
-
                 let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 95;
-                let desDataStarted = false;
 
-                let cuotasHeaderRow = rows.find(r => r && r.c && r.c[colCuota] && safeString(r.c[colCuota]).toUpperCase() === 'CUOTA');
+                // Captura cabeceras del Cronograma
+                let cuotasHeaderRow = rows.find(r => r && r.c && safeString(r.c[idxCuotaCol]).toUpperCase() === 'CUOTA');
                 if (cuotasHeaderRow) {
-                    for (let c = colCuota; c < cuotasHeaderRow.c.length; c++) {
+                    for (let c = idxCuotaCol; c < cuotasHeaderRow.c.length; c++) {
                         let hVal = safeString(cuotasHeaderRow.c[c]);
                         if (!hVal) break;
                         cuotasHeaders.push(hVal);
                     }
                 }
 
+                // EXTRACCIÓN MAESTRA EN UN SOLO RECORRIDO
                 for (let i = 0; i < rows.length; i++) {
                     const row = rows[i];
                     if (!row || !row.c) continue;
 
-                    let bVal = safeString(row.c[colCiclo]);
-                    if (bVal.toUpperCase() === 'CICLO') {
-                        desDataStarted = true;
-                        continue;
-                    }
-
-                    if (desDataStarted) {
-                        if (bVal.toUpperCase().includes('TOTAL')) {
+                    // 1. Deserción (B2:J15)
+                    let cicloVal = safeString(row.c[colCiclo]);
+                    if (cicloVal && cicloVal.toUpperCase() !== 'CICLO' && !cicloNameIsHeader(cicloVal)) {
+                        if (cicloNameEqualsTotal(cicloName)) {
                             totalMat = getVal(row.c[colMat], true);
                             totalPag = getVal(row.c[colPag], true);
                             totalDes = getVal(row.c[colSus], true);
-                            
                             if (row.c[colCum]) {
                                 let v = row.c[colCum].v;
                                 totalCum = (typeof v === 'number' && v <= 1) ? v * 100 : parseFloat(v) || 95;
                             }
-                            desDataStarted = false; 
-                        } else if (bVal !== '' && !bVal.toUpperCase().includes('VENCIMIENTO')) {
+                        } else {
                             cachedDesercionRows.push({
-                                ciclo: bVal,
+                                ciclo: cicloName,
                                 tutor: safeString(row.c[colTutor]),
                                 matriculados: getVal(row.c[colMat], true),
                                 pagantes: getVal(row.c[colPag], true),
@@ -446,8 +432,9 @@
                         }
                     }
 
-                    let moroDniVal = safeString(row.c[colMoroDni]);
-                    let moroAlumnoVal = safeString(row.c[colMoroAlumno]);
+                    // 2. Morosidad (Y2:AE1000)
+                    let mDni = safeString(row.c[colMoroDni]);
+                    let mAlum = safeString(row.c[colMoroAlumno]);
                     if (moroDniVal && moroDniVal.toUpperCase() !== 'DNI' && moroAlumnoVal) {
                         moroDataCached.push({
                             num: row.c[colMoroNum] ? safeString(row.c[colMoroNum]) : (moroDataCached.length + 1),
@@ -460,8 +447,9 @@
                         });
                     }
 
-                    let cuotaCell = safeString(row.c[colCuota]);
-                    if (cuotaCell && !isNaN(cuotaCell) && cuotasHeaders.length > 0 && i > rows.indexOf(cuotasHeaderRow)) {
+                    // 3. Cronograma de Cuotas (M3:V11)
+                    let qVal = safeString(row.c[colCuota]);
+                    if (qCell && !isNaN(qCell) && cuotasHeaders.length > 0 && i > rows.indexOf(cuotasHeaderRow)) {
                         let cells = [];
                         for (let k = 0; k < cuotasHeaders.length; k++) {
                             cells.push(safeString(row.c[colCuota + k]) || '-');
@@ -470,7 +458,14 @@
                     }
                 }
 
-                // Renderizar KPI Globales
+                function safeString(cell) {
+                    if (!cell) return '';
+                    if (cell.f !== undefined && cell.f !== null) return cell.f.trim();
+                    if (cell.v !== null && cell.v !== undefined) return cell.v.toString().trim();
+                    return '';
+                }
+
+                // Carga dinámica de vistas e indicadores
                 document.getElementById('lbl-total-mat').innerText = Math.round(totalMat);
                 document.getElementById('lbl-total-pag').innerText = Math.round(totalPag);
                 document.getElementById('lbl-total-des').innerText = Math.round(totalDes);
@@ -709,7 +704,13 @@
                     },
                     scales: {
                         x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
-                        y: { grid: { color: 'rgba(51, 65, 85, 0.2)' }, ticks: { color: '#94a3b8' } }
+                        y: { 
+                            grid: { color: 'rgba(51, 65, 85, 0.2)' }, 
+                            ticks: { 
+                                color: '#94a3b8',
+                                callback: function(value) { if (value % 1 === 0) { return value; } }
+                            } 
+                        }
                     }
                 }
             });
@@ -744,4 +745,4 @@
         setInterval(loadAllDashboardData, 60000);
     </script>
 </body>
-</html> 
+</html>
