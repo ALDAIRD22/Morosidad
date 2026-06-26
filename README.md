@@ -91,7 +91,7 @@
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
-        <!-- MENÚ DE NAVEGACIÓN POR TARJETAS -->
+        <!-- MENÚ DE NAVEGACIÓN POR TARJETAS (TRANSICIONES ESTRUCTURADAS) -->
         <nav class="grid grid-cols-2 lg:grid-cols-4 gap-5">
             <button onclick="switchTab('view-desercion')" id="btn-view-desercion" class="nav-card premium-card text-left rounded-2xl p-5 border-indigo-500/40 bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-lg shadow-indigo-500/5">
                 <div class="text-3xl">📉</div>
@@ -186,7 +186,7 @@
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-slate-800/80 pb-4">
                     <div>
                         <h3 class="text-lg font-bold text-white tracking-tight">👥 Estudiantes en Estado de Alerta / Deudores</h3>
-                        <p class="text-xs text-slate-400 mt-1">Lista completa unificada (Rango Y2:AE11)</p>
+                        <p class="text-xs text-slate-400 mt-1">Lista completa procesada en tiempo real (Pestaña MORO)</p>
                     </div>
                     <div>
                         <input type="text" id="search-moro" oninput="filterMoroTable()" placeholder="Buscar alumno o tutor..." class="bg-slate-950/60 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full md:w-64 focus:outline-none focus:border-indigo-500 transition-colors">
@@ -217,7 +217,7 @@
             <div class="premium-card rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h3 class="text-lg font-bold text-white tracking-tight">🔍 Buscador y Filtro Dinámico por Tutor</h3>
-                    <p class="text-xs text-slate-400 mt-1">Aisla las métricas y los alumnos deudores de forma instantánea.</p>
+                    <p class="text-xs text-slate-400 mt-1">Aisla de forma exacta las métricas y alumnos deudores desde la pestaña MORO.</p>
                 </div>
                 <div>
                     <select id="tutor-select-filter" onchange="onTutorFilterChange()" class="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full sm:w-64 focus:outline-none focus:border-indigo-500 transition-colors font-semibold">
@@ -248,7 +248,7 @@
 
             <!-- Tabla de Alumnos asignados al Tutor Filtrado -->
             <div class="premium-card rounded-2xl p-6 shadow-xl">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Alumnos con Alertas Vinculados</h3>
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Alumnos con Alertas (Pestaña MORO)</h3>
                 <div class="w-full overflow-x-auto">
                     <table class="w-full text-left border-collapse text-xs">
                         <thead>
@@ -271,12 +271,12 @@
             </div>
         </div>
 
-        <!-- VISTA 4: CUOTAS -->
+        <!-- VISTA 4: CUOTAS (REFORMADA) -->
         <div id="view-cuotas" class="tab-view hidden space-y-6">
             <div class="premium-card rounded-2xl p-6 shadow-xl">
                 <div class="mb-5 border-b border-slate-800/80 pb-3">
                     <h3 class="text-lg font-bold text-white tracking-tight">📅 Cronograma General de Cuotas de Pagos</h3>
-                    <p class="text-xs text-slate-400 mt-1">Fechas límite de vencimientos institucionales (Rango M3:V11)</p>
+                    <p class="text-xs text-slate-400 mt-1">Fechas límite de vencimientos institucionales</p>
                 </div>
                 <div class="w-full overflow-x-auto">
                     <table class="w-full text-left border-collapse text-xs">
@@ -362,9 +362,42 @@
                 const tableData = await fetchSheetData(SHEET_JSON_URL);
                 const rows = tableData.rows;
 
+                // ESCÁNER DE MAPEO ASOCIATIVO ROBUSTO
                 let colCiclo = 1, colTutor = 2, colMat = 3, colPag = 4, colSus = 5, colDes = 6, colCum = 7, colNot = 8;
                 let colCuota = 12;
                 let colMoroNum = 24, colMoroDni = 25, colMoroAlumno = 26, colMoroCorte = 27, colMoroTutor = 28, colMoroCond = 29, colMoroMotiv = 30;
+
+                for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                    if (!rows[i] || !rows[i].c) continue;
+                    let labels = rows[i].c.map(cell => safeString(cell).toUpperCase());
+                    
+                    let pos = labels.indexOf('CICLO');
+                    if (pos !== -1 && pos < 4) {
+                        colCiclo = pos;
+                        colTutor = labels.indexOf('TUTO') !== -1 ? labels.indexOf('TUTO') : pos + 1;
+                        colMat = labels.indexOf('MAT') !== -1 ? labels.indexOf('MAT') : pos + 2;
+                        colPag = labels.indexOf('PAG') !== -1 ? labels.indexOf('PAG') : pos + 3;
+                        colSus = labels.indexOf('SUS') !== -1 ? labels.indexOf('SUS') : pos + 4;
+                        colDes = labels.indexOf('DES') !== -1 ? labels.indexOf('DES') : pos + 5;
+                        colCum = labels.indexOf('CUM') !== -1 ? labels.indexOf('CUM') : pos + 6;
+                        colNot = labels.indexOf('NOT') !== -1 ? labels.indexOf('NOT') : pos + 7;
+                    }
+                    let qIdx = labels.indexOf('CUOTA');
+                    if (qIdx !== -1) colCuota = qIdx;
+
+                    let dIdx = labels.indexOf('DNI');
+                    if (dIdx !== -1 && dIdx > 15) {
+                        colMoroDni = dIdx;
+                        colMoroNum = labels.indexOf('#') !== -1 ? labels.indexOf('#') : dIdx - 1;
+                        colMoroAlumno = labels.indexOf('ALUMNO') !== -1 ? labels.indexOf('ALUMNO') : dIdx + 1;
+                        colMoroCorte = labels.indexOf('CORTE') !== -1 ? labels.indexOf('CORTE') : dIdx + 2;
+                        colMoroTutor = labels.findIndex((v, idx) => idx > colMoroAlumno && v.includes('TUTOR'));
+                        if(colMoroTutor === -1) colMoroTutor = dIdx + 3;
+                        let condIdx = labels.findIndex(v => v.includes('CONDI') || v.includes('PAGO'));
+                        colMoroCond = condIdx !== -1 ? condIdx : dIdx + 4;
+                        colMoroMotiv = labels.indexOf('MOTIVOS') !== -1 ? labels.indexOf('MOTIVOS') : dIdx + 5;
+                    }
+                }
 
                 cachedDesercionRows = [];
                 moroDataCached = [];
@@ -374,7 +407,7 @@
                 let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 95;
                 let desDataStarted = false;
 
-                // Capturar cabeceras de cuotas de pagos
+                // Captura cabeceras del cronograma
                 let cuotasHeaderRow = rows.find(r => r && r.c && r.c[colCuota] && safeString(r.c[colCuota]).toUpperCase() === 'CUOTA');
                 if (cuotasHeaderRow) {
                     for (let c = colCuota; c < cuotasHeaderRow.c.length; c++) {
@@ -388,25 +421,21 @@
                     const row = rows[i];
                     if (!row || !row.c) continue;
 
-                    // 1. Mapeo de Deserción
                     let cVal = safeString(row.c[colCiclo]);
                     if (cVal.toUpperCase() === 'CICLO') {
                         desDataStarted = true;
                         continue;
                     }
+
                     if (desDataStarted) {
-                        if (cVal.toUpperCase() === 'TOTAL' || cVal.toUpperCase() === 'TOTALES') {
+                        if (cVal.toUpperCase().includes('TOTAL')) {
                             totalMat = getVal(row.c[colMat], true);
                             totalPag = getVal(row.c[colPag], true);
                             totalDes = getVal(row.c[colSus], true);
                             
                             if (row.c[colCum]) {
                                 let v = row.c[colCum].v;
-                                if (typeof v === 'number') {
-                                    totalCum = v <= 1 ? v * 100 : v;
-                                } else {
-                                    totalCum = parseFloat(safeString(row.c[colCum]).replace(/[^0-9.]/g, '')) || 95;
-                                }
+                                totalCum = (typeof v === 'number' && v <= 1) ? v * 100 : parseFloat(v) || 95;
                             }
                             desDataStarted = false; 
                         } else if (cVal !== '' && !cVal.toUpperCase().includes('VENCIMIENTO')) {
@@ -423,7 +452,7 @@
                         }
                     }
 
-                    // 2. Mapeo de Alumnos Alertas / Morosos (Y2:AE11)
+                    // Mapeo Morosidad Unificado Y2:AE11
                     let moroDniVal = safeString(row.c[colMoroDni]);
                     let moroAlumnoVal = safeString(row.c[colMoroAlumno]);
                     if (moroDniVal && moroDniVal.toUpperCase() !== 'DNI' && moroAlumnoVal) {
@@ -438,7 +467,7 @@
                         });
                     }
 
-                    // 3. Mapeo de Filas del Cronograma de Cuotas
+                    // Mapeo Cronograma
                     let cuotaCell = safeString(row.c[colCuota]);
                     if (cuotaCell && !isNaN(cuotaCell) && cuotasHeaders.length > 0 && i > rows.indexOf(cuotasHeaderRow)) {
                         let cells = [];
@@ -449,7 +478,7 @@
                     }
                 }
 
-                // Renderizar KPI Globales exactos (95%)
+                // Renderizar KPI Globales fijos sin redondeos rotos
                 document.getElementById('lbl-total-mat').innerText = Math.round(totalMat);
                 document.getElementById('lbl-total-pag').innerText = Math.round(totalPag);
                 document.getElementById('lbl-total-des').innerText = Math.round(totalDes);
