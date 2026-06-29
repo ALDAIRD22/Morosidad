@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 import time
 
 # ==========================================
-# CONFIGURACIÓN DE LA PÁGINA Y FUENTES MODERNAS
+# CONFIGURACIÓN DE LA PÁGINA Y FUENTES
 # ==========================================
 st.set_page_config(page_title="Dashboard Comas 2026", page_icon="🔥", layout="wide")
 
@@ -13,31 +13,23 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap');
     
-    html, body, [class*="css"] {
-        font-family: 'Poppins', sans-serif;
-    }
+    html, body, [class*="css"] { font-family: 'Poppins', sans-serif; }
     
-    /* Animaciones */
     @keyframes fadeInUp { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
     .animate-up { animation: fadeInUp 0.6s ease-out; }
     
-    /* Títulos web */
     .title-comas { font-size: 3.5rem; font-weight: 800; background: linear-gradient(45deg, #FF4B2B, #FF416C); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; padding: 10px; margin-bottom: 0; }
     .subtitle { text-align: center; color: #555; font-size: 1.2rem; font-weight: 300; margin-bottom: 30px; }
     
-    /* Tarjetas Web (Cards) */
     .web-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); margin-bottom: 25px; border-top: 5px solid #FF4B2B; transition: transform 0.3s ease; }
     .web-card:hover { transform: translateY(-5px); }
     
-    /* Salón de la Fama */
     .hall-of-fame { background: linear-gradient(135deg, #FFD700, #FDB931); padding: 20px; border-radius: 15px; color: white; text-align: center; box-shadow: 0 10px 20px rgba(255, 215, 0, 0.3); margin-bottom: 25px; }
     .hall-of-fame h3 { color: white; font-weight: 800; margin:0; }
     .tutor-star { font-size: 1.2rem; font-weight: 600; background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; display: inline-block; margin: 5px; }
     
-    /* IA Box */
     .ia-box { background: linear-gradient(135deg, #f6f8fd 0%, #f1f5f9 100%); border-radius: 15px; padding: 25px; border-left: 6px solid #4CAF50; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
     
-    /* Saludo Personalizado */
     .greeting { font-size: 2rem; font-weight: 800; color: #FF4B2B; text-align: center; margin-top: 30px; padding: 20px; background: rgba(255, 75, 43, 0.05); border-radius: 15px; }
     </style>
 """, unsafe_allow_html=True)
@@ -124,6 +116,15 @@ if menu == "🏠 Inicio":
 elif menu == "🏆 Olimpiadas":
     st.markdown('<p class="title-comas" style="font-size: 2.5rem;">Recaudación Olimpiadas</p>', unsafe_allow_html=True)
     
+    # MÉTRICAS GLOBALES OLIMPIADAS
+    st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
+    st.subheader("💰 Resumen Global de la Sede")
+    col_tot1, col_tot2, col_tot3 = st.columns(3)
+    col_tot1.metric("Total Recaudado", f"S/ {df_olim['Recaudado'].sum():,.2f}")
+    col_tot2.metric("Total Yape", f"S/ {df_olim['YAPE'].sum():,.2f}")
+    col_tot3.metric("Total Efectivo", f"S/ {df_olim['EFECTIVO'].sum():,.2f}")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
     st.markdown('<div class="web-card">', unsafe_allow_html=True)
     st.subheader("🥇 Ranking de Tutores (Avance %)")
     df_ranking = df_olim.sort_values(by="Avance %", ascending=True)
@@ -147,7 +148,6 @@ elif menu == "🏆 Olimpiadas":
     st.plotly_chart(fig_pie, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Saludo personalizado
     nombre_tutor = tutor_seleccionado.split()[0].capitalize()
     st.markdown(f"<div class='greeting animate-up'>👋 ¡Hola {nombre_tutor}! Sigue dando lo mejor por tu salón.</div>", unsafe_allow_html=True)
 
@@ -156,6 +156,19 @@ elif menu == "🏆 Olimpiadas":
 # ==========================================
 elif menu == "⚠️ Morosidad":
     st.markdown('<p class="title-comas" style="font-size: 2.5rem;">Panel de Morosidad</p>', unsafe_allow_html=True)
+    
+    # MÉTRICAS GLOBALES MOROSIDAD
+    total_mat = df_mor_resumen['MAT'].sum()
+    total_sus = df_mor_resumen['SUS'].sum()
+    pct_morosidad = (total_sus / total_mat * 100) if total_mat > 0 else 0
+    
+    st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
+    st.subheader("📉 Indicadores Generales")
+    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1.metric("Población Total (Matriculados)", int(total_mat))
+    col_m2.metric("Cantidad de Morosos (Suspendidos)", int(total_sus))
+    col_m3.metric("Índice de Morosidad", f"{pct_morosidad:.1f}%", delta="- Crítico" if pct_morosidad > 15 else "Estable", delta_color="inverse")
+    st.markdown('</div>', unsafe_allow_html=True)
     
     # SALÓN DE LA FAMA (Nota 20)
     tutores_20 = df_mor_resumen[df_mor_resumen['NOT'] == 20]['TUTO'].unique()
@@ -209,13 +222,9 @@ elif menu == "🤖 Análisis Académico":
     with st.spinner(f"Analizando métricas de {tutor_ia}..."):
         time.sleep(1)
         
-    # Promedios Generales, EXSA y EXSI
     promedio_general = datos_ia["NOTA"].mean()
-    
-    # Filtrar EXSA y EXSI (asegurando que el texto contenga la palabra)
     df_exsa = datos_ia[datos_ia['EXAMEN'].astype(str).str.contains('EXSA', case=False, na=False)]
     df_exsi = datos_ia[datos_ia['EXAMEN'].astype(str).str.contains('EXSI', case=False, na=False)]
-    
     prom_exsa = df_exsa["NOTA"].mean() if not df_exsa.empty else 0
     prom_exsi = df_exsi["NOTA"].mean() if not df_exsi.empty else 0
     
@@ -234,9 +243,24 @@ elif menu == "🤖 Análisis Académico":
     </div>
     """, unsafe_allow_html=True)
     
-    st.subheader(f"📈 Evolución de Notas")
-    fig_notas = px.line(datos_ia, x="EXAMEN", y="NOTA", markers=True, title="Tendencia de Puntaje por Examen")
+    st.subheader(f"📈 Evolución de Notas (Pasa el cursor sobre los puntos)")
+    
+    # Gráfico con HOVER (Al pasar el ratón muestra todos los datos)
+    fig_notas = px.line(
+        datos_ia, x="EXAMEN", y="NOTA", markers=True, 
+        title="Tendencia de Puntaje por Examen",
+        hover_data=["ASISTENCIA", "FALTA", "VARIACION", "SICA", "C+D", "CXM"]
+    )
+    fig_notas.update_traces(marker=dict(size=10, color='#FF4B2B'), line=dict(width=3))
     st.plotly_chart(fig_notas, use_container_width=True)
+    
+    st.divider()
+    
+    # Cuadro Resumen detallado
+    st.subheader("📑 Cuadro Resumen de Notas")
+    columnas_mostrar = [col for col in ['EXAMEN', 'ASISTENCIA', 'FALTA', 'NOTA', 'VARIACION', 'SICA', 'C+D', 'CXM'] if col in datos_ia.columns]
+    st.dataframe(datos_ia[columnas_mostrar], use_container_width=True, hide_index=True)
+    
     st.markdown('</div>', unsafe_allow_html=True)
     
     # Saludo personalizado
