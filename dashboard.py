@@ -21,77 +21,63 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# CARGA DE DATOS
+# CARGA DE DATOS (CONECTADO EN VIVO A GOOGLE SHEETS)
 # ==========================================
-@st.cache_data
+# ttl=300 actualiza los datos automáticamente cada 5 minutos
+@st.cache_data(ttl=300)
 def load_data():
-    # 1. Olimpiadas
-    df_olim = pd.DataFrame({
-        "Tutor": ["GARCIA GUTIERREZ LESLY SABINITA", "MARTINEZ HUAIRA NATALY YANDIRA", "BOZA VILLANUEVA MARIANA ADELAIDA", "SANCHEZ RAMOS CINTHYA JUNET", "ALCARRAZ TEJEDA ALEXANDER JAVIER", "CARRERA MARTINEZ VIRGINIA GABY", "ESPADA ARAOZ RODRIGO PAOLO"],
-        "Ciclo": ["SEMI ANUAL ENERO-A", "SEMI ANUAL MARZO-A", "SEMI ANUAL MARZO-B", "INTENSIVO MARZO-A", "SEMI ABRIL -A", "INTENSIVO ABRIL-A", "SAN JUNIO"],
-        "Matriculados": [63, 74, 62, 78, 48, 32, 109],
-        "Meta": [51, 59, 51, 62, 38, 26, 82],
-        "Pagantes": [51, 60, 31, 63, 20, 26, 34],
-        "Meta Dinero": [1530, 1770, 1530, 1860, 1140, 780, 2460],
-        "EFECTIVO": [588, 390, 210, 705.5, 250, 140, 210],
-        "YAPE": [942, 1410, 720, 1184.5, 350, 640, 795],
-        "Recaudado": [1530, 1800, 930, 1890, 600, 780, 1005],
-        "Falta": [0, -30, 600, -30, 540, 0, 1455],
-        "Avance %": [100, 102, 61, 102, 53, 100, 41]
-    })
+    sheet_id = "1ABAEjZLFfVASDJGgYeSmikt0KmqAgNZiQzmlO8smMKY"
     
-    # 2. Morosidad - Resumen Exacto
-    df_mor_resumen = pd.DataFrame({
-        "FECHA": ["20-06-2026", "20-06-2026", "20-06-2026", "27-06-2026", "27-06-2026", "27-06-2026", "27-06-2026", "27-06-2026", "04-07-2026", "04-07-2026", "04-07-2026", "04-07-2026"],
-        "CICLO": ["SAN EN", "MATE SABATINO", "CIENCIAS 0", "SAN ABRIL", "INT ABRIL", "SAN MAYO", "INT MAYO", "MATE 0", "INT MARZO", "SAN MAR A", "SAN MAR B", "ESCOLARES"],
-        "TUTO": ["LESLY", "MAJA", "MAJA", "ALEXANDER", "GABY", "RODRIGO", "RODRIGO", "MAJA", "CINTHYA", "NATALY", "MARIANA", "MAJA"],
-        "MAT": [63, 46, 23, 48, 32, 84, 25, 6, 78, 74, 62, 11],
-        "PAG": [59, 37, 15, 29, 32, 59, 5, 6, 78, 74, 62, 11],
-        "SUS": [4, 9, 8, 19, 0, 25, 20, 0, 0, 0, 0, 0],
-        "DES": ["6.3%", "19.6%", "34.8%", "39.6%", "0.0%", "29.8%", "80.0%", "0.0%", "0.0%", "0.0%", "0.0%", "0.0%"],
-        "CUM": ["93.7%", "80.4%", "65.2%", "60.4%", "100.0%", "70.2%", "20.0%", "100.0%", "100.0%", "100.0%", "100.0%", "100.0%"],
-        "NOT": [20, 10, 10, 10, 20, 10, 10, 20, 20, 20, 20, 20]
-    })
+    # Enlaces a cada pestaña de tu Google Sheets
+    url_olim = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=272338387"
+    url_mor = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=0"
+    url_ana = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=2004118335"
     
-    # 3. Morosidad - Alumnos (Rango X2:AC200)
-    # NOTA: Aquí debes pegar los datos de tus 200 alumnos separados por comas.
-    df_mor_alumnos = pd.DataFrame({
-        "DNI": ["72831111", "75302957", "73565909", "61423613", "72053356"], # <-- Pega los 200 DNIs aquí
-        "ALUMNO": ["CASTILLO VARGAS JOANN", "MENDOZA ARONI FABRICIO", "SANGAMA RAMIREZ ISAIAS", "SALAZAR TORRES ESTHEFANY", "SAAVEDRA CHAVEZ DARIANA"], # <-- Pega los 200 Nombres aquí
-        "Tutor": ["LESLY", "LESLY", "ALEXANDER", "RODRIGO", "RODRIGO"], # <-- Pega los 200 Tutores aquí
-        "CONDICIÓN PAGO": ["PAGA VIERNES", "SUSPENDIDO", "DEBE 1 CUOTA", "RETIRO", "PAGA VIERNES"] # <-- Pega las 200 Condiciones aquí
-    })
-    
-    # 4. Cuotas (L3:U11 Exacto)
-    df_cuotas = pd.DataFrame({
-        "CUOTA": [1, 2, 3, 4, 5, 6, 7],
-        "SAN MAR": ["16-mar", "11-abr", "9-may", "6-jun", "4-jul", "8-ago", "5-sep"],
-        "INT MAR": ["16-mar", "11-abr", "9-may", "6-jun", "4-jul", "8-ago", "5-sep"],
-        "SAN ABR": ["6-abr", "2-may", "30-may", "27-jun", "1-ago", "29-ago", "20-jun"],
-        "INT ABR": ["6-abr", "2-may", "30-may", "27-jun", "31-oct", "28-nov", "-"],
-        "SAN MAY": ["4-may", "30-may", "27-jun", "1-ago", "31-oct", "28-nov", "-"],
-        "INT MAY": ["4-may", "30-may", "27-jun", "1-ago", "25-abr", "23-may", "-"],
-        "SAN JUL": ["6-jul", "8-ago", "5-sep", "3-oct", "-", "-", "-"],
-        "REP JUL": ["6-jul", "8-ago", "5-sep", "3-oct", "-", "-", "-"],
-        "SAN ENE": ["2-ene", "31-ene", "28-feb", "28-mar", "25-abr", "23-may", "-"]
-    })
-    
-    # 5. Análisis Académico (Datos exactos de Lesly con variaciones en %)
-    df_analisis = pd.DataFrame({
-        "TUTOR": ["GARCIA LESLY", "GARCIA LESLY", "GARCIA LESLY", "GARCIA LESLY", "GARCIA LESLY"],
-        "CÓDIGO": ["SMSAN0126P9A", "SMSAN0126P9A", "SMSAN0126P9A", "SMSAN0126P9A", "SMSAN0126P9A"],
-        "EXAMEN": ["EXSA 1", "EXSA 2", "EXSA 3", "EXSA 4", "EXSA 5"],
-        "ASISTENCIA": [60, 54, 52, 53, 57],
-        "FALTA": [3, 9, 11, 10, 6],
-        "NOTA": [1071.7, 998.99, 1076.06, 1091.84, 1052.9],
-        "VARIACION": ["100.0%", "-6.8%", "7.7%", "1.5%", "-3.6%"],
-        "SICA": [10, 5, 8, 10, 9],
-        "C+D": ["AC - RV - CI", "IG-CI-LI", "AC-RV-EC", "HU-AC-LI", "HU-RV-PS"],
-        "CXM": ["QUI - FI - GEF-MAT", "HP-FI-AR", "QU-RM-AL", "GF-TR-HP", "QU-AL-FI"]
-    })
-    
-    return df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis
+    try:
+        # 1. OLIMPIADAS
+        df_olim = pd.read_csv(url_olim)
+        df_olim.columns = df_olim.columns.str.strip() # Limpia espacios en los títulos
+        df_olim = df_olim.dropna(subset=["Tutor"])
+        
+        # Limpiar símbolos de moneda y porcentaje para poder sumar y graficar
+        cols_numericas_olim = ['Matriculados', 'Meta', 'Pagantes', 'EFECTIVO', 'YAPE', 'Recaudado', 'Falta', 'Avance %']
+        for col in cols_numericas_olim:
+            if col in df_olim.columns:
+                df_olim[col] = pd.to_numeric(df_olim[col].astype(str).str.replace(r'[S/,\s%]', '', regex=True).str.replace('-', '0'), errors='coerce').fillna(0)
 
+        # 2. MOROSIDAD - RESUMEN (A2:I15)
+        df_mor_resumen = pd.read_csv(url_mor, skiprows=1, usecols=range(0, 9))
+        df_mor_resumen.columns = ["FECHA", "CICLO", "TUTO", "MAT", "PAG", "SUS", "DES", "CUM", "NOT"]
+        df_mor_resumen = df_mor_resumen.dropna(subset=["TUTO"])
+        df_mor_resumen = df_mor_resumen[df_mor_resumen["TUTO"] != "TOTAL"] # Excluir fila de totales si existe
+        for col in ["MAT", "PAG", "SUS"]:
+            df_mor_resumen[col] = pd.to_numeric(df_mor_resumen[col], errors='coerce').fillna(0)
+
+        # 3. MOROSIDAD - ALUMNOS (X2:AC200)
+        df_mor_alumnos = pd.read_csv(url_mor, skiprows=1, usecols=range(23, 29))
+        df_mor_alumnos.columns = ["#", "DNI", "ALUMNO", "CORTE", "Tutor", "CONDICIÓN PAGO"]
+        df_mor_alumnos = df_mor_alumnos.dropna(subset=["DNI", "ALUMNO"])
+
+        # 4. CUOTAS (L3:U11)
+        df_cuotas = pd.read_csv(url_mor, skiprows=2, usecols=range(11, 21))
+        df_cuotas.columns = ["CUOTA", "SAN MAR", "INT MAR", "SAN ABR", "INT ABR", "SAN MAY", "INT MAY", "SAN JUL", "REP JUL", "SAN ENE"]
+        df_cuotas = df_cuotas.dropna(subset=["CUOTA"])
+
+        # 5. ANÁLISIS ACADÉMICO
+        df_analisis = pd.read_csv(url_ana)
+        df_analisis.columns = df_analisis.columns.str.strip()
+        df_analisis = df_analisis.dropna(subset=["TUTOR", "NOTA"])
+        for col in ["NOTA", "ASISTENCIA", "FALTA"]:
+            if col in df_analisis.columns:
+                df_analisis[col] = pd.to_numeric(df_analisis[col].astype(str).str.replace('%', ''), errors='coerce').fillna(0)
+
+        return df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis
+    
+    except Exception as e:
+        st.error(f"Error al conectar con Google Sheets. Asegúrate de que el archivo sea público (Cualquier usuario que tenga el vínculo). Detalle: {e}")
+        st.stop()
+
+# Cargar los datos
 df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis = load_data()
 
 # ==========================================
@@ -146,9 +132,9 @@ elif menu == "🏆 Olimpiadas":
         st.error(f"🚨 ¡Alerta! Porcentaje bajo, se necesita acción inmediata. ({avance}%)")
         
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Matriculados vs Meta", f"{datos_tutor['Matriculados']} / {datos_tutor['Meta']}")
-    col2.metric("Pagantes", datos_tutor['Pagantes'])
-    col3.metric("Recaudado Total", f"S/ {datos_tutor['Recaudado']}", f"Falta: S/ {datos_tutor['Falta']}")
+    col1.metric("Matriculados vs Meta", f"{int(datos_tutor['Matriculados'])} / {int(datos_tutor['Meta'])}")
+    col2.metric("Pagantes", int(datos_tutor['Pagantes']))
+    col3.metric("Recaudado Total", f"S/ {datos_tutor['Recaudado']:,.2f}", f"Falta: S/ {datos_tutor['Falta']:,.2f}")
     col4.metric("Avance %", f"{avance}%")
     
     fig_pie = px.pie(values=[datos_tutor["YAPE"], datos_tutor["EFECTIVO"]], names=["Yape", "Efectivo"], hole=0.5, title=f"Distribución de Pagos - {tutor_seleccionado}")
@@ -160,9 +146,9 @@ elif menu == "🏆 Olimpiadas":
 elif menu == "⚠️ Morosidad":
     st.title("⚠️ Panel de Morosidad y Pagos")
     
-    total_mat = df_mor_resumen["MAT"].sum()
-    total_pag = df_mor_resumen["PAG"].sum()
-    total_sus = df_mor_resumen["SUS"].sum()
+    total_mat = int(df_mor_resumen["MAT"].sum())
+    total_pag = int(df_mor_resumen["PAG"].sum())
+    total_sus = int(df_mor_resumen["SUS"].sum())
     deuda_acumulada = total_sus * 510
     
     st.subheader("Resumen Global de la Sede")
@@ -181,7 +167,7 @@ elif menu == "⚠️ Morosidad":
         st.dataframe(df_mor_resumen, use_container_width=True, hide_index=True)
         
     with col_der:
-        st.subheader("🚨 Lista de Morosos Filtrada (X2:AC200)")
+        st.subheader("🚨 Lista de Morosos Filtrada")
         tutor_moroso = st.selectbox("Filtrar alumnos del tutor:", ["Todos"] + list(df_mor_alumnos["Tutor"].unique()))
         
         if tutor_moroso == "Todos":
@@ -219,18 +205,17 @@ elif menu == "🤖 Análisis Académico":
         <p><strong>Diagnóstico Académico:</strong> Nivel {diagnostico}</p>
         <p>Se han analizado los registros del tutor <b>{tutor_ia}</b>. 
         El promedio de notas de sus alumnos es de <b>{promedio_nota:.1f} puntos</b>, con una asistencia promedio de <b>{promedio_asistencia:.1f} alumnos por examen</b>.</p>
-        <p>Se registran un total de <b>{total_faltas} faltas</b> acumuladas en los exámenes recientes.</p>
+        <p>Se registran un total de <b>{int(total_faltas)} faltas</b> acumuladas en los exámenes recientes.</p>
         <p><b>💡 Recomendación de la IA:</b> {"Excelente trabajo, el puntaje es alto. Mantener el ritmo en los simulacros." if diagnostico == "Sobresaliente" else "Reforzar los temas del último examen y hacer seguimiento a las inasistencias."}</p>
     </div>
     """, unsafe_allow_html=True)
     
     st.divider()
     
-    # Gráfica de evolución de exámenes (EXSA, EXSI, etc.)
     st.subheader(f"📈 Evolución de Notas por Examen - {tutor_ia}")
     fig_notas = px.line(datos_ia, x="EXAMEN", y="NOTA", markers=True, text="NOTA", title="Tendencia de Puntaje")
     fig_notas.update_traces(textposition="top center")
     st.plotly_chart(fig_notas, use_container_width=True)
     
     st.subheader(f"📑 Base de Datos Analizada: {tutor_ia}")
-    st.dataframe(datos_ia, use_container_width=True, hide_index=True) 
+    st.dataframe(datos_ia, use_container_width=True, hide_index=True)
