@@ -50,6 +50,7 @@ def load_data():
     url_ana = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=2004118335"
     
     try:
+        # 1. OLIMPIADAS
         df_olim = pd.read_csv(url_olim)
         df_olim.columns = df_olim.columns.str.strip()
         df_olim = df_olim.dropna(subset=["Tutor"])
@@ -58,6 +59,7 @@ def load_data():
             if col in df_olim.columns:
                 df_olim[col] = pd.to_numeric(df_olim[col].astype(str).str.replace(r'[S/,\s%]', '', regex=True).str.replace('-', '0'), errors='coerce').fillna(0)
 
+        # 2. MOROSIDAD - RESUMEN
         df_mor_resumen = pd.read_csv(url_mor, skiprows=1, usecols=range(0, 9))
         df_mor_resumen.columns = ["FECHA", "CICLO", "TUTO", "MAT", "PAG", "SUS", "DES", "CUM", "NOT"]
         df_mor_resumen = df_mor_resumen.dropna(subset=["TUTO"])
@@ -65,14 +67,18 @@ def load_data():
         for col in ["MAT", "PAG", "SUS", "NOT"]:
             df_mor_resumen[col] = pd.to_numeric(df_mor_resumen[col], errors='coerce').fillna(0)
 
-        df_mor_alumnos = pd.read_csv(url_mor, skiprows=1, usecols=range(23, 29))
-        df_mor_alumnos.columns = ["#", "DNI", "ALUMNO", "CORTE", "Tutor", "CONDICIÓN PAGO"]
+        # 3. MOROSIDAD - ALUMNOS (AHORA LEE HASTA LA COLUMNA DE CELULAR)
+        # range(23, 30) lee desde la columna X hasta la AD
+        df_mor_alumnos = pd.read_csv(url_mor, skiprows=1, usecols=range(23, 30))
+        df_mor_alumnos.columns = ["#", "DNI", "ALUMNO", "CORTE", "Tutor", "CONDICIÓN PAGO", "Celular"]
         df_mor_alumnos = df_mor_alumnos.dropna(subset=["DNI", "ALUMNO"])
 
+        # 4. CUOTAS
         df_cuotas = pd.read_csv(url_mor, skiprows=3, usecols=range(11, 21))
         df_cuotas.columns = ["CUOTA", "SAN MAR", "INT MAR", "SAN ABR", "INT ABR", "SAN MAY", "INT MAY", "SAN JUL", "REP JUL", "SAN ENE"]
         df_cuotas = df_cuotas.dropna(subset=["CUOTA"])
 
+        # 5. ANÁLISIS ACADÉMICO
         df_analisis = pd.read_csv(url_ana)
         df_analisis.columns = df_analisis.columns.str.strip()
         df_analisis = df_analisis.dropna(subset=["TUTOR", "NOTA"])
@@ -87,7 +93,6 @@ def load_data():
 
 df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis = load_data()
 
-# Convertir dataframe a CSV para el botón de descarga
 @st.cache_data
 def convert_df(df):
     return df.to_csv(index=False).encode('utf-8')
@@ -121,7 +126,6 @@ if menu == "🏠 Inicio":
 elif menu == "🏆 Olimpiadas":
     st.markdown('<p class="title-comas" style="font-size: 2.5rem;">Recaudación Olimpiadas</p>', unsafe_allow_html=True)
     
-    # PESTAÑAS (TABS)
     tab1, tab2 = st.tabs(["📊 Resumen Global", "🎯 Detalle por Tutor"])
     
     with tab1:
@@ -159,7 +163,6 @@ elif menu == "🏆 Olimpiadas":
         col_graf1, col_graf2 = st.columns(2)
         
         with col_graf1:
-            # NUEVO: GRÁFICO DE VELOCÍMETRO (GAUGE)
             fig_gauge = go.Figure(go.Indicator(
                 mode = "gauge+number",
                 value = avance,
@@ -204,7 +207,6 @@ elif menu == "⚠️ Morosidad":
         estrellas_html = "".join([f"<span class='tutor-star'>⭐ {t}</span>" for t in tutores_20])
         st.markdown(f"<div class='hall-of-fame animate-up'><h3>🏆 SALÓN DE LA FAMA - NOTA 20 🏆</h3><p>¡Gestión perfecta!</p>{estrellas_html}</div>", unsafe_allow_html=True)
 
-    # PESTAÑAS (TABS)
     tab_mor1, tab_mor2, tab_mor3 = st.tabs(["📊 Deuda por Salón", "🚨 Lista Interactiva de Morosos", "📅 Cronograma de Cuotas"])
     
     with tab_mor1:
@@ -223,15 +225,24 @@ elif menu == "⚠️ Morosidad":
             
         df_filtrado = df_mor_alumnos if tutor_moroso == "Todos" else df_mor_alumnos[df_mor_alumnos["Tutor"] == tutor_moroso]
         
-        # NUEVO: BOTÓN DE DESCARGA
         with col_btn:
             st.markdown("<br>", unsafe_allow_html=True)
             csv_data = convert_df(df_filtrado)
             st.download_button(label="📥 Descargar Reporte (CSV)", data=csv_data, file_name=f"Morosos_{tutor_moroso}.csv", mime='text/csv')
         
-        # NUEVO: LINK DE WHATSAPP AUTOMÁTICO
+        # =========================================================================================
+        # BOTÓN DE WHATSAPP DINÁMICO (LEE LA COLUMNA CELULAR DE TU EXCEL)
+        # =========================================================================================
         df_mostrar = df_filtrado.copy()
-        df_mostrar['Acción'] = "https://wa.me/51999999999?text=Hola%20" + df_mostrar['ALUMNO'].astype(str).str.replace(' ', '%20') + ",%20te%20recordamos%20tu%20cuota."
+        
+        # Limpia la columna celular (elimina espacios o símbolos que hayas puesto por error en el Excel)
+        df_mostrar['Celular_Limpio'] = df_mostrar['Celular'].astype(str).str.replace(r'\D', '', regex=True)
+        
+        # Genera el enlace de WhatsApp usando el número de cada alumno
+        df_mostrar['Acción'] = "https://wa.me/" + df_mostrar['Celular_Limpio'] + "?text=Hola%20apoderado%20de%20" + df_mostrar['ALUMNO'].astype(str).str.replace(' ', '%20') + ",%20le%20escribimos%20de%20la%20Sede%20Comas%20para%20recordarle%20amablemente%20el%20pago%20de%20su%20cuota%20pendiente.%20Muchas%20gracias."
+        
+        # Ocultamos la columna temporal para que la tabla se vea limpia
+        df_mostrar = df_mostrar.drop(columns=['Celular_Limpio'])
         
         st.dataframe(
             df_mostrar, 
@@ -241,7 +252,7 @@ elif menu == "⚠️ Morosidad":
                 "Acción": st.column_config.LinkColumn("Enviar WhatsApp 💬", display_text="Cobrar por WS")
             }
         )
-        st.info("💡 Nota: El botón de WhatsApp usa un número genérico. Funciona abriendo WhatsApp Web con un mensaje pre-armado con el nombre del alumno.")
+        st.info("💡 Haz clic en 'Cobrar por WS' para abrir el chat directamente con el número que pusiste en tu Excel.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with tab_mor3:
@@ -290,14 +301,12 @@ elif menu == "🤖 Análisis Académico":
         """, unsafe_allow_html=True)
         
     with col_ia2:
-        # NUEVO: GRÁFICO DE RADAR (TELARAÑA)
-        # Normalizamos valores a escala 100 para que el radar se vea bien
-        val_nota = min((promedio_general / 2000) * 100, 100) # Asumiendo max 2000 pts
+        val_nota = min((promedio_general / 2000) * 100, 100) 
         val_asist = min(promedio_asistencia, 100)
-        val_sica = min(promedio_sica * 10, 100) # Asumiendo SICA max 10
+        val_sica = min(promedio_sica * 10, 100) 
         
         fig_radar = go.Figure(data=go.Scatterpolar(
-          r=[val_asist, val_nota, val_sica, 85, val_asist], # 85 simulado para Participación
+          r=[val_asist, val_nota, val_sica, 85, val_asist], 
           theta=['Asistencia', 'Notas', 'SICA', 'Participación', 'Asistencia'],
           fill='toself',
           line_color='#FF4B2B'
