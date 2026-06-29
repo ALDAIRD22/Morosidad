@@ -55,7 +55,7 @@ def load_data():
     
     df_analisis = pd.DataFrame({
         "Tutor": ["GARCIA", "MARTINEZ", "BOZA", "SANCHEZ", "ALCARRAZ"] * 10,
-        "Nota": [15, 12, 18, 14, 10, 16, 11, 19, 13, 09] * 5,
+        "Nota": [15, 12, 18, 14, 10, 16, 11, 19, 13, 9] * 5,
         "Asistencia": [100, 80, 95, 85, 70, 100, 75, 90, 80, 60] * 5
     })
     
