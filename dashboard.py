@@ -23,12 +23,11 @@ st.markdown("""
 # ==========================================
 # CARGA DE DATOS (CONECTADO EN VIVO A GOOGLE SHEETS)
 # ==========================================
-# ttl=300 actualiza los datos automáticamente cada 5 minutos
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=300) # Actualiza cada 5 minutos
 def load_data():
     sheet_id = "1ABAEjZLFfVASDJGgYeSmikt0KmqAgNZiQzmlO8smMKY"
     
-    # Enlaces a cada pestaña de tu Google Sheets
+    # Enlaces directos a cada pestaña usando su GID exacto
     url_olim = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=272338387"
     url_mor = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=0"
     url_ana = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=2004118335"
@@ -36,30 +35,33 @@ def load_data():
     try:
         # 1. OLIMPIADAS
         df_olim = pd.read_csv(url_olim)
-        df_olim.columns = df_olim.columns.str.strip() # Limpia espacios en los títulos
+        df_olim.columns = df_olim.columns.str.strip()
         df_olim = df_olim.dropna(subset=["Tutor"])
         
-        # Limpiar símbolos de moneda y porcentaje para poder sumar y graficar
+        # Limpieza de S/ y %
         cols_numericas_olim = ['Matriculados', 'Meta', 'Pagantes', 'EFECTIVO', 'YAPE', 'Recaudado', 'Falta', 'Avance %']
         for col in cols_numericas_olim:
             if col in df_olim.columns:
                 df_olim[col] = pd.to_numeric(df_olim[col].astype(str).str.replace(r'[S/,\s%]', '', regex=True).str.replace('-', '0'), errors='coerce').fillna(0)
 
         # 2. MOROSIDAD - RESUMEN (A2:I15)
+        # skiprows=1 salta la fila 1 (VENCIMIENTO...). Lee desde la fila 2.
         df_mor_resumen = pd.read_csv(url_mor, skiprows=1, usecols=range(0, 9))
         df_mor_resumen.columns = ["FECHA", "CICLO", "TUTO", "MAT", "PAG", "SUS", "DES", "CUM", "NOT"]
         df_mor_resumen = df_mor_resumen.dropna(subset=["TUTO"])
-        df_mor_resumen = df_mor_resumen[df_mor_resumen["TUTO"] != "TOTAL"] # Excluir fila de totales si existe
+        df_mor_resumen = df_mor_resumen[df_mor_resumen["TUTO"] != "TOTAL"] # Quita la fila TOTAL para no duplicar sumas
         for col in ["MAT", "PAG", "SUS"]:
             df_mor_resumen[col] = pd.to_numeric(df_mor_resumen[col], errors='coerce').fillna(0)
 
         # 3. MOROSIDAD - ALUMNOS (X2:AC200)
+        # skiprows=1 salta la fila 1. Lee columnas 23 a 28 (X a AC)
         df_mor_alumnos = pd.read_csv(url_mor, skiprows=1, usecols=range(23, 29))
         df_mor_alumnos.columns = ["#", "DNI", "ALUMNO", "CORTE", "Tutor", "CONDICIÓN PAGO"]
-        df_mor_alumnos = df_mor_alumnos.dropna(subset=["DNI", "ALUMNO"])
+        df_mor_alumnos = df_mor_alumnos.dropna(subset=["DNI", "ALUMNO"]) # Esto lee automáticamente hasta la fila 200 o más, ignorando las vacías.
 
         # 4. CUOTAS (L3:U11)
-        df_cuotas = pd.read_csv(url_mor, skiprows=2, usecols=range(11, 21))
+        # VERIFICADO: skiprows=3 salta las filas 1, 2 y 3. Empieza a leer desde la fila 4 (CUOTA, SAN MAR...)
+        df_cuotas = pd.read_csv(url_mor, skiprows=3, usecols=range(11, 21))
         df_cuotas.columns = ["CUOTA", "SAN MAR", "INT MAR", "SAN ABR", "INT ABR", "SAN MAY", "INT MAY", "SAN JUL", "REP JUL", "SAN ENE"]
         df_cuotas = df_cuotas.dropna(subset=["CUOTA"])
 
@@ -74,10 +76,10 @@ def load_data():
         return df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis
     
     except Exception as e:
-        st.error(f"Error al conectar con Google Sheets. Asegúrate de que el archivo sea público (Cualquier usuario que tenga el vínculo). Detalle: {e}")
+        st.error(f"Error al conectar con Google Sheets. Asegúrate de que el archivo sea público ('Cualquier usuario que tenga el vínculo'). Detalle del error: {e}")
         st.stop()
 
-# Cargar los datos
+# Ejecutar la carga de datos
 df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis = load_data()
 
 # ==========================================
