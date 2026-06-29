@@ -67,8 +67,7 @@ def load_data():
         for col in ["MAT", "PAG", "SUS", "NOT"]:
             df_mor_resumen[col] = pd.to_numeric(df_mor_resumen[col], errors='coerce').fillna(0)
 
-        # 3. MOROSIDAD - ALUMNOS (AHORA LEE HASTA LA COLUMNA DE CELULAR)
-        # range(23, 30) lee desde la columna X hasta la AD
+        # 3. MOROSIDAD - ALUMNOS
         df_mor_alumnos = pd.read_csv(url_mor, skiprows=1, usecols=range(23, 30))
         df_mor_alumnos.columns = ["#", "DNI", "ALUMNO", "CORTE", "Tutor", "CONDICIÓN PAGO", "Celular"]
         df_mor_alumnos = df_mor_alumnos.dropna(subset=["DNI", "ALUMNO"])
@@ -223,25 +222,23 @@ elif menu == "⚠️ Morosidad":
         with col_filtro:
             tutor_moroso = st.selectbox("Filtrar alumnos por tutor:", ["Todos"] + list(df_mor_alumnos["Tutor"].unique()))
             
+        # Filtramos la tabla según el tutor
         df_filtrado = df_mor_alumnos if tutor_moroso == "Todos" else df_mor_alumnos[df_mor_alumnos["Tutor"] == tutor_moroso]
+        
+        # =====================================================================
+        # NUEVO: REINICIAR EL NÚMERO DE ORDEN (#) DESDE EL 1
+        # =====================================================================
+        df_filtrado = df_filtrado.copy()
+        df_filtrado["#"] = range(1, len(df_filtrado) + 1)
         
         with col_btn:
             st.markdown("<br>", unsafe_allow_html=True)
             csv_data = convert_df(df_filtrado)
             st.download_button(label="📥 Descargar Reporte (CSV)", data=csv_data, file_name=f"Morosos_{tutor_moroso}.csv", mime='text/csv')
         
-        # =========================================================================================
-        # BOTÓN DE WHATSAPP DINÁMICO (LEE LA COLUMNA CELULAR DE TU EXCEL)
-        # =========================================================================================
         df_mostrar = df_filtrado.copy()
-        
-        # Limpia la columna celular (elimina espacios o símbolos que hayas puesto por error en el Excel)
         df_mostrar['Celular_Limpio'] = df_mostrar['Celular'].astype(str).str.replace(r'\D', '', regex=True)
-        
-        # Genera el enlace de WhatsApp usando el número de cada alumno
         df_mostrar['Acción'] = "https://wa.me/" + df_mostrar['Celular_Limpio'] + "?text=Hola%20apoderado%20de%20" + df_mostrar['ALUMNO'].astype(str).str.replace(' ', '%20') + ",%20le%20escribimos%20de%20la%20Sede%20Comas%20para%20recordarle%20amablemente%20el%20pago%20de%20su%20cuota%20pendiente.%20Muchas%20gracias."
-        
-        # Ocultamos la columna temporal para que la tabla se vea limpia
         df_mostrar = df_mostrar.drop(columns=['Celular_Limpio'])
         
         st.dataframe(
@@ -337,4 +334,4 @@ elif menu == "🤖 Análisis Académico":
         <p>📊 Según el último examen, debes reforzar urgentemente <b>{cursos_bajos}</b>.</p>
         <p>🚀 <i>Estrategia: Aplica simulacros cronometrados semanales y tutorías personalizadas. ¡Vamos por esos cachimbos!</i></p>
     </div>
-    """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True) 
