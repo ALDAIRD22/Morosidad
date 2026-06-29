@@ -87,14 +87,14 @@
     <!-- Alerta de Sincronización -->
     <div id="error-box" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
         <div class="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl text-sm font-medium">
-            ⚠️ Alerta de Sincronización: No se pudieron leer los datos del servidor. Verifica los permisos de enlace público de tu Google Sheets.
+            ⚠️ Alerta de Sincronización: No se pudieron leer los datos del servidor. Verifica el estado público de tu Google Sheets.
         </div>
     </div>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
-        <!-- NAVEGACIÓN PRINCIPAL: PESTAÑAS DE EXCEL REALES -->
-        <nav class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <!-- NAVEGACIÓN PRINCIPAL: SEPARACIÓN POR PESTAÑAS REALES -->
+        <nav class="grid grid-cols-2 lg:grid-cols-4 gap-5">
             <button onclick="switchTab('view-olim')" id="btn-view-olim" class="nav-card premium-card text-left rounded-2xl p-5 border-cyan-500/40 bg-cyan-950/20 ring-1 ring-cyan-500/20 shadow-lg shadow-cyan-500/5">
                 <div class="text-3xl">💰</div>
                 <div class="text-sm font-bold text-white mt-3">Pestaña OLIM</div>
@@ -105,10 +105,15 @@
                 <div class="text-sm font-bold text-slate-400 mt-3">Pestaña DES</div>
                 <div class="text-[11px] text-slate-500 mt-1 font-medium">Análisis de Deserción y Cuotas</div>
             </button>
+            <button onclick="switchTab('view-morosidad')" id="btn-view-morosidad" class="nav-card premium-card text-left rounded-2xl p-5 hover:bg-slate-900/60 hover:border-slate-800/50">
+                <div class="text-3xl">👥</div>
+                <div class="text-sm font-bold text-slate-400 mt-3">Lista de Morosidad</div>
+                <div class="text-[11px] text-slate-500 mt-1 font-medium">Todos los Alumnos Alertas</div>
+            </button>
             <button onclick="switchTab('view-tutor-filter')" id="btn-view-tutor-filter" class="nav-card premium-card text-left rounded-2xl p-5 hover:bg-slate-900/60 hover:border-slate-800/50">
                 <div class="text-3xl">🔍</div>
                 <div class="text-sm font-bold text-slate-400 mt-3">Alertas por Tutor</div>
-                <div class="text-[11px] text-slate-500 mt-1 font-medium">Buscador Cruzado de Deudores</div>
+                <div class="text-[11px] text-slate-500 mt-1 font-medium">Buscador Cruzado Individual</div>
             </button>
         </nav>
 
@@ -142,11 +147,6 @@
                     <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-5">Distribución Efectivo vs Yape</h3>
                     <div class="relative h-64 flex items-center justify-center"><canvas id="chartDoughnut"></canvas></div>
                 </div>
-            </div>
-
-            <div class="premium-card rounded-2xl p-6 shadow-xl">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-5">Control General de Alumnos Globales</h3>
-                <div class="relative h-80"><canvas id="chartStudents"></canvas></div>
             </div>
 
             <section class="premium-card rounded-2xl overflow-hidden shadow-2xl">
@@ -229,7 +229,7 @@
                                 <th class="py-3.5 px-4 text-center">Pagantes</th>
                                 <th class="py-3.5 px-4 text-center">Suspendidos</th>
                                 <th class="py-3.5 px-4 text-center text-rose-400">Deserción (%)</th>
-                                <th class="py-3.5 px-4 text-center text-cyan-400">Cumplimiento (%)</th>
+                                <th class="py-3.5 px-4 text-center text-emerald-400">Cumplimiento (%)</th>
                                 <th class="py-3.5 px-4 text-center">Nota</th>
                             </tr>
                         </thead>
@@ -253,12 +253,43 @@
             </section>
         </div>
 
-        <!-- CONTENEDOR VISTA 3: HOJA DE TRANSICIÓN Y ALERTAS -->
+        <!-- CONTENEDOR VISTA 3: LISTA GENERAL DE MOROSIDAD -->
+        <div id="view-morosidad" class="tab-view hidden space-y-6">
+            <div class="premium-card rounded-2xl p-6 shadow-xl">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-slate-800/80 pb-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-white tracking-tight">👥 Estudiantes en Estado de Alerta / Deudores</h3>
+                        <p class="text-xs text-slate-400 mt-1">Lista unificada extraída desde la sección derecha de la hoja</p>
+                    </div>
+                    <div>
+                        <input type="text" id="search-moro" oninput="filterMoroTable()" placeholder="Buscar alumno o tutor..." class="bg-slate-950/60 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full md:w-64 focus:outline-none focus:border-indigo-500 transition-colors">
+                    </div>
+                </div>
+                <div class="w-full overflow-x-auto custom-scroll">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-950 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 text-[10px]">
+                                <th class="py-3.5 px-4 w-12">#</th>
+                                <th class="py-3.5 px-4">DNI</th>
+                                <th class="py-3.5 px-4">Alumno</th>
+                                <th class="py-3.5 px-4 text-center">Corte</th>
+                                <th class="py-3.5 px-4">Tutor</th>
+                                <th class="py-3.5 px-4 text-center">Condición de Pago</th>
+                                <th class="py-3.5 px-4">Motivos / Comentarios</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/40 font-semibold text-slate-300" id="table-body-morosidad"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENEDOR VISTA 4: ALERTAS POR TUTOR -->
         <div id="view-tutor-filter" class="tab-view hidden space-y-6">
             <div class="premium-card rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h3 class="text-lg font-bold text-white tracking-tight">🔍 Buscador Cruzado Individual por Tutor</h3>
-                    <p class="text-xs text-slate-400 mt-1">Aisla los montos financieros y la lista de deudores asignados.</p>
+                    <p class="text-xs text-slate-400 mt-1">Aisla de forma inmediata los montos recaudados de OLIM y sus deudores de DES.</p>
                 </div>
                 <div>
                     <select id="tutor-select-filter" onchange="onTutorFilterChange()" class="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full sm:w-64 focus:outline-none focus:border-indigo-500 transition-colors font-semibold">
@@ -308,31 +339,6 @@
             </div>
         </div>
 
-        <!-- SECCIÓN OCULTA: MOROSIDAD GENERAL CONSOLIDADA -->
-        <div id="view-morosidad" class="tab-view hidden space-y-6">
-            <div class="premium-card rounded-2xl p-6 shadow-xl">
-                <div class="mb-4 border-b border-slate-800/80 pb-2">
-                    <h3 class="text-lg font-bold text-white tracking-tight">👥 Lista Consolidada de Alumnos Alertas</h3>
-                </div>
-                <div class="w-full overflow-x-auto custom-scroll">
-                    <table class="w-full text-left border-collapse text-xs">
-                        <thead>
-                            <tr class="bg-slate-950 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 text-[10px]">
-                                <th class="py-3.5 px-4 w-12">#</th>
-                                <th class="py-3.5 px-4">DNI</th>
-                                <th class="py-3.5 px-4">Alumno</th>
-                                <th class="py-3.5 px-4 text-center">Corte</th>
-                                <th class="py-3.5 px-4">Tutor</th>
-                                <th class="py-3.5 px-4 text-center">Condición de Pago</th>
-                                <th class="py-3.5 px-4">Motivos / Comentarios</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-800/40 font-semibold text-slate-300" id="table-body-morosidad"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
     </main>
 
     <script>
@@ -342,6 +348,10 @@
 
         const URL_DES = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&gid=${GID_DES}`;
         const URL_OLIM = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&gid=${GID_OLIM}`;
+
+        let cachedOlimRows = [];
+        let cachedDesercionRows = [];
+        let moroDataCached = [];
 
         function safeString(cell) {
             if (!cell) return '';
@@ -379,13 +389,7 @@
             document.querySelectorAll('.nav-card').forEach(btn => {
                 btn.className = "nav-card premium-card text-left rounded-2xl p-5 hover:bg-slate-900/60 hover:border-slate-800/50";
             });
-            let actBtnId = 'btn-view-olim';
-            if(targetId === 'view-des' || targetId === 'view-morosidad' || targetId === 'view-cuotas') {
-                actBtnId = 'btn-view-des';
-            } else if(targetId === 'view-tutor-filter') {
-                actBtnId = 'btn-view-tutor-filter';
-            }
-            document.getElementById(actBtnId).className = "nav-card premium-card text-left rounded-2xl p-5 border-cyan-500/40 bg-cyan-950/90 ring-1 ring-cyan-500/20 shadow-lg shadow-cyan-500/5";
+            document.getElementById('btn-' + targetId).className = "nav-card premium-card text-left rounded-2xl p-5 border-cyan-500/40 bg-cyan-950/20 ring-1 ring-cyan-500/20 shadow-lg shadow-cyan-500/5";
         }
 
         async function fetchSheetData(url) {
@@ -399,7 +403,6 @@
 
         async function loadAllDashboardData() {
             try {
-                // LLAMADA EN PARALELO CORREGIDA SIN VARIABLES BASURA O INEXISTENTES
                 const [tableDes, tableOlim] = await Promise.all([
                     fetchSheetData(URL_DES),
                     fetchSheetData(URL_OLIM)
@@ -452,7 +455,7 @@
                 let gAvanceNum = gMetaDinero > 0 ? (gRecaudado / gMetaDinero) * 100 : 95;
 
                 // ==========================================
-                // 2. EXTRACTOR PESTAÑA DESERCIÓN (DES START i=0)
+                // 2. EXTRACTOR PESTAÑA DESERCIÓN (DES DESDE LESLY)
                 // ==========================================
                 let desDataStarted = false;
                 let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 95;
@@ -490,7 +493,7 @@
                         }
                     }
 
-                    // Extraer Morosidad (Y3:AE1000) -> Índices reales fijos 24 al 30
+                    // Extraer Morosidad (Y3:AE1000)
                     let mDni = safeString(row.c[25]);
                     let mAlum = safeString(row.c[26]);
                     if (mDni && mDni.toUpperCase() !== 'DNI' && mAlum && mAlum.toUpperCase() !== 'ALUMNO') {
@@ -505,7 +508,7 @@
                         });
                     }
 
-                    // Extraer Cronograma (M5:V11) -> Índices reales fijos 12 al 21
+                    // Extraer Cronograma (M5:V11)
                     let cuotaCell = safeString(row.c[12]);
                     if (cuotaCell && !isNaN(cuotaCell) && cuotaCell !== '' && i >= 3 && i <= 12) {
                         let cells = [];
@@ -517,14 +520,14 @@
                     }
                 }
 
-                // Pintar KPI Globales de la pestaña OLIM
+                // Pintar KPI Globales Financieros de OLIM
                 document.getElementById('txt-meta-global').innerText = "S/ " + Math.round(gMetaDinero).toLocaleString('es-PE');
                 document.getElementById('txt-recaudado-global').innerText = "S/ " + Math.round(gRecaudado).toLocaleString('es-PE');
                 document.getElementById('txt-falta-global').innerText = "S/ " + Math.round(gFalta).toLocaleString('es-PE');
                 document.getElementById('txt-avance-global').innerText = Math.round(gAvanceNum) + '%';
                 document.getElementById('bar-avance-global').style.width = Math.round(gAvanceNum) + '%';
 
-                // Pintar KPI Globales de la pestaña DES
+                // Pintar KPI de Alumnos de DES
                 document.getElementById('lbl-total-mat').innerText = Math.round(totalMat);
                 document.getElementById('lbl-total-pag').innerText = Math.round(totalPag);
                 document.getElementById('lbl-total-des').innerText = Math.round(totalDes);
@@ -647,6 +650,39 @@
             renderMoroTable(filtered);
         }
 
+        function borderAlphaFix(index) {
+            return index === 0 ? 'bg-amber-500/10 border-amber-500/30' : index === 1 ? 'bg-slate-300/10 border-slate-400/30' : index === 2 ? 'bg-amber-700/10 border-amber-700/30' : 'bg-slate-900/60 border-slate-800/80';
+        }
+
+        function renderLeaderboard(data) {
+            const container = document.getElementById('leaderboard-container');
+            container.innerHTML = '';
+            let ranked = [...data].sort((a,b) => b.recaudado - a.recaudado);
+
+            ranked.forEach((row, index) => {
+                const item = document.createElement('div');
+                item.className = `flex items-center justify-between p-4 rounded-xl border ${borderAlphaFix(index)}`;
+                let medal = `<span class="text-sm font-bold text-slate-400 w-6">${index + 1}</span>`;
+                if (index === 0) medal = `<span class="text-xl w-6">🥇</span>`;
+                if (index === 1) medal = `<span class="text-xl w-6">🥈</span>`;
+                if (index === 2) medal = `<span class="text-xl w-6">🥉</span>`;
+                item.innerHTML = `
+                    <div class="flex items-center space-x-3 truncate">
+                        ${medal}
+                        <div class="truncate">
+                            <p class="text-sm font-semibold text-slate-200 truncate">${row.tutor}</p>
+                            <p class="text-xs text-slate-400 truncate">${row.ciclo}</p>
+                        </div>
+                    </div>
+                    <div class="text-right ml-2 flex-shrink-0">
+                        <p class="text-sm font-bold text-emerald-400">S/ ${Math.round(row.recaudado)}</p>
+                        <p class="text-[11px] text-cyan-400 font-bold">${row.avance}</p>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
         function populateTutorDropdown() {
             const select = document.getElementById('tutor-select-filter');
             const currentSelection = select.value;
@@ -751,35 +787,6 @@
                 }
                 tr.innerHTML = htmlStr;
                 tbody.appendChild(tr);
-            });
-        }
-
-        function renderLeaderboard(data) {
-            const container = document.getElementById('leaderboard-container');
-            container.innerHTML = '';
-            let ranked = [...data].sort((a,b) => b.recaudado - a.recaudado);
-
-            ranked.forEach((row, index) => {
-                const item = document.createElement('div');
-                item.className = `flex items-center justify-between p-4 rounded-xl border ${borderAlphaFix(index)}`;
-                let medal = `<span class="text-sm font-bold text-slate-400 w-6">${index + 1}</span>`;
-                if (index === 0) medal = `<span class="text-xl w-6">🥇</span>`;
-                if (index === 1) medal = `<span class="text-xl w-6">🥈</span>`;
-                if (index === 2) medal = `<span class="text-xl w-6">🥉</span>`;
-                item.innerHTML = `
-                    <div class="flex items-center space-x-3 truncate">
-                        ${medal}
-                        <div class="truncate">
-                            <p class="text-sm font-semibold text-slate-200 truncate">${row.tutor}</p>
-                            <p class="text-xs text-slate-400 truncate">${row.ciclo}</p>
-                        </div>
-                    </div>
-                    <div class="text-right ml-2 flex-shrink-0">
-                        <p class="text-sm font-bold text-emerald-400">S/ ${Math.round(row.recaudado)}</p>
-                        <p class="text-[11px] text-cyan-400 font-bold">${row.avance}</p>
-                    </div>
-                `;
-                container.appendChild(item);
             });
         }
 
