@@ -30,7 +30,7 @@ st.markdown("""
     
     .ia-box { background: linear-gradient(135deg, #f6f8fd 0%, #f1f5f9 100%); border-radius: 15px; padding: 25px; border-left: 6px solid #4CAF50; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
     
-    .greeting { font-size: 2rem; font-weight: 800; color: #FF4B2B; text-align: center; margin-top: 30px; padding: 20px; background: rgba(255, 75, 43, 0.05); border-radius: 15px; }
+    .greeting { font-size: 1.1rem; font-weight: 400; color: #333; text-align: left; margin-top: 30px; padding: 25px; background: rgba(255, 75, 43, 0.05); border-radius: 15px; border-left: 6px solid #FF4B2B;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -49,6 +49,9 @@ def load_data():
         df_olim = pd.read_csv(url_olim)
         df_olim.columns = df_olim.columns.str.strip()
         df_olim = df_olim.dropna(subset=["Tutor"])
+        # CORRECCIÓN: Evitar que sume la fila "TOTAL"
+        df_olim = df_olim[~df_olim['Tutor'].astype(str).str.upper().str.contains('TOTAL')]
+        
         for col in ['Matriculados', 'Meta', 'Pagantes', 'EFECTIVO', 'YAPE', 'Recaudado', 'Falta', 'Avance %']:
             if col in df_olim.columns:
                 df_olim[col] = pd.to_numeric(df_olim[col].astype(str).str.replace(r'[S/,\s%]', '', regex=True).str.replace('-', '0'), errors='coerce').fillna(0)
@@ -57,7 +60,7 @@ def load_data():
         df_mor_resumen = pd.read_csv(url_mor, skiprows=1, usecols=range(0, 9))
         df_mor_resumen.columns = ["FECHA", "CICLO", "TUTO", "MAT", "PAG", "SUS", "DES", "CUM", "NOT"]
         df_mor_resumen = df_mor_resumen.dropna(subset=["TUTO"])
-        df_mor_resumen = df_mor_resumen[df_mor_resumen["TUTO"] != "TOTAL"]
+        df_mor_resumen = df_mor_resumen[~df_mor_resumen["TUTO"].astype(str).str.upper().str.contains('TOTAL')]
         for col in ["MAT", "PAG", "SUS", "NOT"]:
             df_mor_resumen[col] = pd.to_numeric(df_mor_resumen[col], errors='coerce').fillna(0)
 
@@ -116,7 +119,7 @@ if menu == "🏠 Inicio":
 elif menu == "🏆 Olimpiadas":
     st.markdown('<p class="title-comas" style="font-size: 2.5rem;">Recaudación Olimpiadas</p>', unsafe_allow_html=True)
     
-    # MÉTRICAS GLOBALES OLIMPIADAS
+    # MÉTRICAS GLOBALES OLIMPIADAS CORREGIDAS
     st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
     st.subheader("💰 Resumen Global de la Sede")
     col_tot1, col_tot2, col_tot3 = st.columns(3)
@@ -126,16 +129,23 @@ elif menu == "🏆 Olimpiadas":
     st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown('<div class="web-card">', unsafe_allow_html=True)
-    st.subheader("🥇 Ranking de Tutores (Avance %)")
+    st.subheader("🥇 Ranking de Tutores (Haz clic en una barra)")
     df_ranking = df_olim.sort_values(by="Avance %", ascending=True)
     fig_ranking = px.bar(df_ranking, x="Avance %", y="Tutor", orientation='h', text="Avance %", color="Avance %", color_continuous_scale="Sunsetdark")
     fig_ranking.update_traces(texttemplate='%{text}%', textposition='outside')
-    st.plotly_chart(fig_ranking, use_container_width=True)
+    
+    # INTERACTIVIDAD: Clic en el gráfico
+    evento_clic = st.plotly_chart(fig_ranking, use_container_width=True, on_select="rerun")
+    
+    # Detectar a quién le dio clic (o usar el primero por defecto)
+    tutor_seleccionado = df_olim["Tutor"].iloc[0]
+    if evento_clic and len(evento_clic.selection.points) > 0:
+        tutor_seleccionado = evento_clic.selection.points[0].y
+        
     st.markdown('</div>', unsafe_allow_html=True)
     
-    st.markdown('<div class="web-card">', unsafe_allow_html=True)
-    st.subheader("🔎 Detalle Interactivo por Tutor")
-    tutor_seleccionado = st.selectbox("Elegir Tutor:", df_olim["Tutor"].unique())
+    st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
+    st.subheader(f"🔎 Detalle Interactivo: {tutor_seleccionado}")
     datos_tutor = df_olim[df_olim["Tutor"] == tutor_seleccionado].iloc[0]
     
     col1, col2, col3, col4 = st.columns(4)
@@ -147,9 +157,6 @@ elif menu == "🏆 Olimpiadas":
     fig_pie = px.pie(values=[datos_tutor["YAPE"], datos_tutor["EFECTIVO"]], names=["Yape", "Efectivo"], hole=0.5)
     st.plotly_chart(fig_pie, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
-    
-    nombre_tutor = tutor_seleccionado.split()[0].capitalize()
-    st.markdown(f"<div class='greeting animate-up'>👋 ¡Hola {nombre_tutor}! Sigue dando lo mejor por tu salón.</div>", unsafe_allow_html=True)
 
 # ==========================================
 # PÁGINA 3: MOROSIDAD
@@ -157,7 +164,6 @@ elif menu == "🏆 Olimpiadas":
 elif menu == "⚠️ Morosidad":
     st.markdown('<p class="title-comas" style="font-size: 2.5rem;">Panel de Morosidad</p>', unsafe_allow_html=True)
     
-    # MÉTRICAS GLOBALES MOROSIDAD
     total_mat = df_mor_resumen['MAT'].sum()
     total_sus = df_mor_resumen['SUS'].sum()
     pct_morosidad = (total_sus / total_mat * 100) if total_mat > 0 else 0
@@ -170,7 +176,6 @@ elif menu == "⚠️ Morosidad":
     col_m3.metric("Índice de Morosidad", f"{pct_morosidad:.1f}%", delta="- Crítico" if pct_morosidad > 15 else "Estable", delta_color="inverse")
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # SALÓN DE LA FAMA (Nota 20)
     tutores_20 = df_mor_resumen[df_mor_resumen['NOT'] == 20]['TUTO'].unique()
     if len(tutores_20) > 0:
         estrellas_html = "".join([f"<span class='tutor-star'>⭐ {t}</span>" for t in tutores_20])
@@ -182,7 +187,6 @@ elif menu == "⚠️ Morosidad":
         </div>
         """, unsafe_allow_html=True)
 
-    # CÁLCULO DE DEUDA POR SALÓN
     df_mor_resumen['DEUDA_SALON'] = df_mor_resumen['SUS'] * 510
     
     st.markdown('<div class="web-card">', unsafe_allow_html=True)
@@ -244,8 +248,6 @@ elif menu == "🤖 Análisis Académico":
     """, unsafe_allow_html=True)
     
     st.subheader(f"📈 Evolución de Notas (Pasa el cursor sobre los puntos)")
-    
-    # Gráfico con HOVER (Al pasar el ratón muestra todos los datos)
     fig_notas = px.line(
         datos_ia, x="EXAMEN", y="NOTA", markers=True, 
         title="Tendencia de Puntaje por Examen",
@@ -255,14 +257,22 @@ elif menu == "🤖 Análisis Académico":
     st.plotly_chart(fig_notas, use_container_width=True)
     
     st.divider()
-    
-    # Cuadro Resumen detallado
     st.subheader("📑 Cuadro Resumen de Notas")
     columnas_mostrar = [col for col in ['EXAMEN', 'ASISTENCIA', 'FALTA', 'NOTA', 'VARIACION', 'SICA', 'C+D', 'CXM'] if col in datos_ia.columns]
     st.dataframe(datos_ia[columnas_mostrar], use_container_width=True, hide_index=True)
-    
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Saludo personalizado
-    nombre_tutor = tutor_ia.split()[0].capitalize() if isinstance(tutor_ia, str) else "Tutor"
-    st.markdown(f"<div class='greeting animate-up'>👋 ¡Hola {nombre_tutor}! Revisa estos datos para potenciar a tus alumnos.</div>", unsafe_allow_html=True)
+    # IA RECOMENDACIONES SAN MARCOS
+    nombre_tutor = str(tutor_ia).split()[0].capitalize()
+    ultimo_examen = datos_ia.iloc[-1] if not datos_ia.empty else None
+    
+    cursos_bajos = f"{ultimo_examen['C+D']} y {ultimo_examen['CXM']}" if ultimo_examen is not None and 'C+D' in ultimo_examen else "Letras y Ciencias"
+    
+    st.markdown(f"""
+    <div class='greeting animate-up'>
+        <h3 style='color: #FF4B2B; font-weight: 800; margin-bottom: 10px;'>💡 Recomendación IA para UNMSM</h3>
+        <p>Hola <b>{nombre_tutor}</b>. Para asegurar vacantes en la Universidad Nacional Mayor de San Marcos, te sugerimos enfocar los repasos en preguntas de destreza cognitiva (DECO).</p>
+        <p>📊 Según el último examen de tu salón, debes reforzar urgentemente los cursos de <b>{cursos_bajos}</b>, los cuales presentaron mayor dificultad.</p>
+        <p>🚀 <i>Estrategia recomendada: Aplica simulacros cronometrados semanales y tutorías personalizadas para los alumnos con más faltas. ¡Vamos por esos cachimbos!</i></p>
+    </div>
+    """, unsafe_allow_html=True) 
