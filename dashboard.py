@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import time
 
 # ==========================================
@@ -20,11 +21,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# CARGA DE DATOS (Simulados con tus datos reales)
+# CARGA DE DATOS
 # ==========================================
 @st.cache_data
 def load_data():
-    # 1. Datos de Olimpiadas (Tus datos reales)
+    # 1. Olimpiadas
     df_olim = pd.DataFrame({
         "Tutor": ["GARCIA GUTIERREZ LESLY SABINITA", "MARTINEZ HUAIRA NATALY YANDIRA", "BOZA VILLANUEVA MARIANA ADELAIDA", "SANCHEZ RAMOS CINTHYA JUNET", "ALCARRAZ TEJEDA ALEXANDER JAVIER", "CARRERA MARTINEZ VIRGINIA GABY", "ESPADA ARAOZ RODRIGO PAOLO"],
         "Ciclo": ["SEMI ANUAL ENERO-A", "SEMI ANUAL MARZO-A", "SEMI ANUAL MARZO-B", "INTENSIVO MARZO-A", "SEMI ABRIL -A", "INTENSIVO ABRIL-A", "SAN JUNIO"],
@@ -39,53 +40,54 @@ def load_data():
         "Avance %": [100, 102, 61, 102, 53, 100, 41]
     })
     
-    # 2. Datos de Morosidad - Resumen (A2:I15)
+    # 2. Morosidad - Resumen Exacto
     df_mor_resumen = pd.DataFrame({
-        "FECHA": ["15/06", "15/06", "15/06", "15/06"],
-        "CICLO": ["SEMI ENERO", "SEMI MARZO-A", "INTENSIVO MARZO", "SEMI MARZO-B"],
-        "TUTO": ["LESLY", "NATALY", "CINTHYA", "MARIANA"],
-        "MAT": [63, 74, 78, 62],
-        "PAG": [59, 70, 75, 50],
-        "SUS": [4, 4, 3, 12],
-        "DES": ["6.3%", "5.4%", "3.8%", "19.3%"],
-        "CUM": ["93.7%", "94.6%", "96.2%", "80.7%"],
-        "NOT": [20, 20, 20, 10]
+        "FECHA": ["20-06-2026", "20-06-2026", "20-06-2026", "27-06-2026", "27-06-2026", "27-06-2026", "27-06-2026", "27-06-2026", "04-07-2026", "04-07-2026", "04-07-2026", "04-07-2026"],
+        "CICLO": ["SAN EN", "MATE SABATINO", "CIENCIAS 0", "SAN ABRIL", "INT ABRIL", "SAN MAYO", "INT MAYO", "MATE 0", "INT MARZO", "SAN MAR A", "SAN MAR B", "ESCOLARES"],
+        "TUTO": ["LESLY", "MAJA", "MAJA", "ALEXANDER", "GABY", "RODRIGO", "RODRIGO", "MAJA", "CINTHYA", "NATALY", "MARIANA", "MAJA"],
+        "MAT": [63, 46, 23, 48, 32, 84, 25, 6, 78, 74, 62, 11],
+        "PAG": [59, 37, 15, 29, 32, 59, 5, 6, 78, 74, 62, 11],
+        "SUS": [4, 9, 8, 19, 0, 25, 20, 0, 0, 0, 0, 0],
+        "DES": ["6.3%", "19.6%", "34.8%", "39.6%", "0.0%", "29.8%", "80.0%", "0.0%", "0.0%", "0.0%", "0.0%", "0.0%"],
+        "CUM": ["93.7%", "80.4%", "65.2%", "60.4%", "100.0%", "70.2%", "20.0%", "100.0%", "100.0%", "100.0%", "100.0%", "100.0%"],
+        "NOT": [20, 10, 10, 10, 20, 10, 10, 20, 20, 20, 20, 20]
     })
     
-    # 3. Datos de Morosidad - Alumnos (X2:AC86)
+    # 3. Morosidad - Alumnos (Rango X2:AC200)
+    # NOTA: Aquí debes pegar los datos de tus 200 alumnos separados por comas.
     df_mor_alumnos = pd.DataFrame({
-        "DNI": ["72831111", "75302957", "73565909", "61423613"],
-        "ALUMNO": ["CASTILLO VARGAS JOANN", "MENDOZA ARONI FABRICIO", "SANGAMA RAMIREZ ISAIAS", "SALAZAR TORRES ESTHEFANY"],
-        "Tutor": ["LESLY", "LESLY", "NATALY", "MARIANA"],
-        "CONDICIÓN PAGO": ["PAGA VIERNES", "SUSPENDIDO", "RETIRO", "DEBE 1 CUOTA"]
+        "DNI": ["72831111", "75302957", "73565909", "61423613", "72053356"], # <-- Pega los 200 DNIs aquí
+        "ALUMNO": ["CASTILLO VARGAS JOANN", "MENDOZA ARONI FABRICIO", "SANGAMA RAMIREZ ISAIAS", "SALAZAR TORRES ESTHEFANY", "SAAVEDRA CHAVEZ DARIANA"], # <-- Pega los 200 Nombres aquí
+        "Tutor": ["LESLY", "LESLY", "ALEXANDER", "RODRIGO", "RODRIGO"], # <-- Pega los 200 Tutores aquí
+        "CONDICIÓN PAGO": ["PAGA VIERNES", "SUSPENDIDO", "DEBE 1 CUOTA", "RETIRO", "PAGA VIERNES"] # <-- Pega las 200 Condiciones aquí
     })
     
-    # 4. Datos de Cuotas (L3:U11)
+    # 4. Cuotas (L3:U11 Exacto)
     df_cuotas = pd.DataFrame({
         "CUOTA": [1, 2, 3, 4, 5, 6, 7],
         "SAN MAR": ["16-mar", "11-abr", "9-may", "6-jun", "4-jul", "8-ago", "5-sep"],
-        "INT MAR": ["23-mar", "18-abr", "16-may", "13-jun", "11-jul", "15-ago", "-"],
-        "SAN ABR": ["6-abr", "2-may", "30-may", "27-jun", "1-ago", "29-ago", "-"],
-        "INT ABR": ["13-abr", "9-may", "6-jun", "4-jul", "8-ago", "-", "-"],
-        "SAN MAY": ["4-may", "30-may", "27-jun", "1-ago", "-", "-", "-"],
-        "INT MAY": ["11-may", "6-jun", "4-jul", "8-ago", "-", "-", "-"],
-        "SAN JUL": ["-", "-", "-", "-", "-", "-", "-"],
-        "REP JUL": ["-", "-", "-", "-", "-", "-", "-"],
-        "SAN ENE": ["-", "-", "-", "-", "-", "-", "-"]
+        "INT MAR": ["16-mar", "11-abr", "9-may", "6-jun", "4-jul", "8-ago", "5-sep"],
+        "SAN ABR": ["6-abr", "2-may", "30-may", "27-jun", "1-ago", "29-ago", "20-jun"],
+        "INT ABR": ["6-abr", "2-may", "30-may", "27-jun", "31-oct", "28-nov", "-"],
+        "SAN MAY": ["4-may", "30-may", "27-jun", "1-ago", "31-oct", "28-nov", "-"],
+        "INT MAY": ["4-may", "30-may", "27-jun", "1-ago", "25-abr", "23-may", "-"],
+        "SAN JUL": ["6-jul", "8-ago", "5-sep", "3-oct", "-", "-", "-"],
+        "REP JUL": ["6-jul", "8-ago", "5-sep", "3-oct", "-", "-", "-"],
+        "SAN ENE": ["2-ene", "31-ene", "28-feb", "28-mar", "25-abr", "23-may", "-"]
     })
     
-    # 5. Datos de Análisis Académico (A1:J1000)
+    # 5. Análisis Académico (Datos exactos de Lesly con variaciones en %)
     df_analisis = pd.DataFrame({
-        "TUTOR": ["LESLY", "LESLY", "NATALY", "CINTHYA", "MARIANA"],
-        "CÓDIGO": ["A001", "A002", "A003", "A004", "A005"],
-        "EXAMEN": ["EX1", "EX1", "EX1", "EX1", "EX1"],
-        "ASISTENCIA": [100, 80, 95, 100, 60],
-        "FALTA": [0, 2, 1, 0, 4],
-        "NOTA": [18, 12, 15, 20, 9],
-        "VARIACION": ["+2", "-1", "0", "+4", "-3"],
-        "SICA": ["SI", "NO", "SI", "SI", "NO"],
-        "C+D": [15, 10, 14, 18, 8],
-        "CXM": [12, 8, 11, 15, 6]
+        "TUTOR": ["GARCIA LESLY", "GARCIA LESLY", "GARCIA LESLY", "GARCIA LESLY", "GARCIA LESLY"],
+        "CÓDIGO": ["SMSAN0126P9A", "SMSAN0126P9A", "SMSAN0126P9A", "SMSAN0126P9A", "SMSAN0126P9A"],
+        "EXAMEN": ["EXSA 1", "EXSA 2", "EXSA 3", "EXSA 4", "EXSA 5"],
+        "ASISTENCIA": [60, 54, 52, 53, 57],
+        "FALTA": [3, 9, 11, 10, 6],
+        "NOTA": [1071.7, 998.99, 1076.06, 1091.84, 1052.9],
+        "VARIACION": ["100.0%", "-6.8%", "7.7%", "1.5%", "-3.6%"],
+        "SICA": [10, 5, 8, 10, 9],
+        "C+D": ["AC - RV - CI", "IG-CI-LI", "AC-RV-EC", "HU-AC-LI", "HU-RV-PS"],
+        "CXM": ["QUI - FI - GEF-MAT", "HP-FI-AR", "QU-RM-AL", "GF-TR-HP", "QU-AL-FI"]
     })
     
     return df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis
@@ -120,9 +122,8 @@ if menu == "🏠 Inicio":
 elif menu == "🏆 Olimpiadas":
     st.title("🏆 Recaudación Olimpiadas")
     
-    # Ranking de Tutores por Porcentaje
     st.subheader("🥇 Ranking de Tutores (Porcentaje de Avance)")
-    df_ranking = df_olim.sort_values(by="Avance %", ascending=True) # Ascending para que el mayor quede arriba en Plotly
+    df_ranking = df_olim.sort_values(by="Avance %", ascending=True)
     fig_ranking = px.bar(df_ranking, x="Avance %", y="Tutor", orientation='h', text="Avance %", color="Avance %", color_continuous_scale="Viridis")
     fig_ranking.update_traces(texttemplate='%{text}%', textposition='outside')
     st.plotly_chart(fig_ranking, use_container_width=True)
@@ -135,7 +136,6 @@ elif menu == "🏆 Olimpiadas":
     datos_tutor = df_olim[df_olim["Tutor"] == tutor_seleccionado].iloc[0]
     avance = datos_tutor['Avance %']
     
-    # Mensaje dinámico según porcentaje
     if avance >= 100:
         st.success(f"🌟 ¡Excelente, llegaste a la meta! ({avance}%)")
     elif avance >= 80:
@@ -160,13 +160,15 @@ elif menu == "🏆 Olimpiadas":
 elif menu == "⚠️ Morosidad":
     st.title("⚠️ Panel de Morosidad y Pagos")
     
+    total_mat = df_mor_resumen["MAT"].sum()
+    total_pag = df_mor_resumen["PAG"].sum()
     total_sus = df_mor_resumen["SUS"].sum()
     deuda_acumulada = total_sus * 510
     
     st.subheader("Resumen Global de la Sede")
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Matriculados (MAT)", df_mor_resumen["MAT"].sum())
-    col2.metric("Pagantes (PAG)", df_mor_resumen["PAG"].sum())
+    col1.metric("Matriculados (TOTAL)", total_mat)
+    col2.metric("Pagantes (TOTAL)", total_pag)
     col3.metric("Suspendidos/Deserción", total_sus)
     col4.metric("Deuda Acumulada", f"S/ {deuda_acumulada:,.2f}", "- Crítico", delta_color="inverse")
     
@@ -175,11 +177,11 @@ elif menu == "⚠️ Morosidad":
     col_izq, col_der = st.columns([1, 1])
     
     with col_izq:
-        st.subheader("📊 Rendimiento por Tutor (A2:I15)")
+        st.subheader("📊 Rendimiento por Tutor")
         st.dataframe(df_mor_resumen, use_container_width=True, hide_index=True)
         
     with col_der:
-        st.subheader("🚨 Lista de Morosos Filtrada")
+        st.subheader("🚨 Lista de Morosos Filtrada (X2:AC200)")
         tutor_moroso = st.selectbox("Filtrar alumnos del tutor:", ["Todos"] + list(df_mor_alumnos["Tutor"].unique()))
         
         if tutor_moroso == "Todos":
@@ -189,15 +191,15 @@ elif menu == "⚠️ Morosidad":
             st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
             
     st.divider()
-    st.subheader("📅 Cuadro Completo de Cuotas (L3:U11)")
+    st.subheader("📅 Cuadro Completo de Cuotas")
     st.dataframe(df_cuotas, use_container_width=True, hide_index=True)
 
 # ==========================================
 # PÁGINA 4: ANÁLISIS ACADÉMICO (IA)
 # ==========================================
 elif menu == "🤖 Análisis Académico":
-    st.title("🤖 Asistente de Análisis Académico (A1:J1000)")
-    st.markdown("Selecciona un tutor para generar un análisis basado en su hoja de notas.")
+    st.title("🤖 Asistente de Análisis Académico")
+    st.markdown("Selecciona un tutor para ver su evolución en todos los exámenes (EXSA, EXSI, etc.).")
     
     tutor_ia = st.selectbox("Analizar rendimiento académico del tutor:", df_analisis["TUTOR"].unique())
     datos_ia = df_analisis[df_analisis["TUTOR"] == tutor_ia]
@@ -209,18 +211,26 @@ elif menu == "🤖 Análisis Académico":
     promedio_asistencia = datos_ia["ASISTENCIA"].mean()
     total_faltas = datos_ia["FALTA"].sum()
     
-    diagnostico = "Sobresaliente" if promedio_nota >= 15 else "Regular" if promedio_nota >= 11 else "Deficiente"
+    diagnostico = "Sobresaliente" if promedio_nota >= 1000 else "Regular" if promedio_nota >= 800 else "Deficiente"
     
     st.markdown(f"""
     <div class="ia-box">
         <h4>🧠 Insight Generado por IA para {tutor_ia}</h4>
         <p><strong>Diagnóstico Académico:</strong> Nivel {diagnostico}</p>
         <p>Se han analizado los registros del tutor <b>{tutor_ia}</b>. 
-        El promedio de notas de sus alumnos es de <b>{promedio_nota:.1f}/20</b>, con una asistencia promedio del <b>{promedio_asistencia:.1f}%</b>.</p>
+        El promedio de notas de sus alumnos es de <b>{promedio_nota:.1f} puntos</b>, con una asistencia promedio de <b>{promedio_asistencia:.1f} alumnos por examen</b>.</p>
         <p>Se registran un total de <b>{total_faltas} faltas</b> acumuladas en los exámenes recientes.</p>
-        <p><b>💡 Recomendación de la IA:</b> {"Excelente trabajo, continuar con los repasos de SICA." if diagnostico == "Sobresaliente" else "Reforzar los temas del último examen y hacer seguimiento a las inasistencias."}</p>
+        <p><b>💡 Recomendación de la IA:</b> {"Excelente trabajo, el puntaje es alto. Mantener el ritmo en los simulacros." if diagnostico == "Sobresaliente" else "Reforzar los temas del último examen y hacer seguimiento a las inasistencias."}</p>
     </div>
     """, unsafe_allow_html=True)
     
-    st.subheader(f"Datos Analizados: {tutor_ia}")
-    st.dataframe(datos_ia, use_container_width=True, hide_index=True)
+    st.divider()
+    
+    # Gráfica de evolución de exámenes (EXSA, EXSI, etc.)
+    st.subheader(f"📈 Evolución de Notas por Examen - {tutor_ia}")
+    fig_notas = px.line(datos_ia, x="EXAMEN", y="NOTA", markers=True, text="NOTA", title="Tendencia de Puntaje")
+    fig_notas.update_traces(textposition="top center")
+    st.plotly_chart(fig_notas, use_container_width=True)
+    
+    st.subheader(f"📑 Base de Datos Analizada: {tutor_ia}")
+    st.dataframe(datos_ia, use_container_width=True, hide_index=True) 
