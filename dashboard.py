@@ -49,7 +49,6 @@ def load_data():
         df_olim = pd.read_csv(url_olim)
         df_olim.columns = df_olim.columns.str.strip()
         df_olim = df_olim.dropna(subset=["Tutor"])
-        # CORRECCIÓN: Evitar que sume la fila "TOTAL"
         df_olim = df_olim[~df_olim['Tutor'].astype(str).str.upper().str.contains('TOTAL')]
         
         for col in ['Matriculados', 'Meta', 'Pagantes', 'EFECTIVO', 'YAPE', 'Recaudado', 'Falta', 'Avance %']:
@@ -119,7 +118,6 @@ if menu == "🏠 Inicio":
 elif menu == "🏆 Olimpiadas":
     st.markdown('<p class="title-comas" style="font-size: 2.5rem;">Recaudación Olimpiadas</p>', unsafe_allow_html=True)
     
-    # MÉTRICAS GLOBALES OLIMPIADAS CORREGIDAS
     st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
     st.subheader("💰 Resumen Global de la Sede")
     col_tot1, col_tot2, col_tot3 = st.columns(3)
@@ -134,28 +132,37 @@ elif menu == "🏆 Olimpiadas":
     fig_ranking = px.bar(df_ranking, x="Avance %", y="Tutor", orientation='h', text="Avance %", color="Avance %", color_continuous_scale="Sunsetdark")
     fig_ranking.update_traces(texttemplate='%{text}%', textposition='outside')
     
-    # INTERACTIVIDAD: Clic en el gráfico
+    # INTERACTIVIDAD SEGURA CORREGIDA
     evento_clic = st.plotly_chart(fig_ranking, use_container_width=True, on_select="rerun")
     
-    # Detectar a quién le dio clic (o usar el primero por defecto)
     tutor_seleccionado = df_olim["Tutor"].iloc[0]
-    if evento_clic and len(evento_clic.selection.points) > 0:
-        tutor_seleccionado = evento_clic.selection.points[0].y
-        
+    if evento_clic and hasattr(evento_clic, 'selection') and hasattr(evento_clic.selection, 'points') and len(evento_clic.selection.points) > 0:
+        punto = evento_clic.selection.points[0]
+        # Validar si es diccionario o objeto
+        if isinstance(punto, dict) and "y" in punto:
+            tutor_seleccionado = punto["y"]
+        elif hasattr(punto, "y"):
+            tutor_seleccionado = punto.y
+            
     st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
     st.subheader(f"🔎 Detalle Interactivo: {tutor_seleccionado}")
-    datos_tutor = df_olim[df_olim["Tutor"] == tutor_seleccionado].iloc[0]
     
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Matriculados vs Meta", f"{int(datos_tutor['Matriculados'])} / {int(datos_tutor['Meta'])}")
-    col2.metric("Pagantes", int(datos_tutor['Pagantes']))
-    col3.metric("Recaudado Total", f"S/ {datos_tutor['Recaudado']:,.2f}")
-    col4.metric("Avance %", f"{datos_tutor['Avance %']}%")
-    
-    fig_pie = px.pie(values=[datos_tutor["YAPE"], datos_tutor["EFECTIVO"]], names=["Yape", "Efectivo"], hole=0.5)
-    st.plotly_chart(fig_pie, use_container_width=True)
+    # Prevenir error si el tutor no se encuentra
+    if tutor_seleccionado in df_olim["Tutor"].values:
+        datos_tutor = df_olim[df_olim["Tutor"] == tutor_seleccionado].iloc[0]
+        
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Matriculados vs Meta", f"{int(datos_tutor['Matriculados'])} / {int(datos_tutor['Meta'])}")
+        col2.metric("Pagantes", int(datos_tutor['Pagantes']))
+        col3.metric("Recaudado Total", f"S/ {datos_tutor['Recaudado']:,.2f}")
+        col4.metric("Avance %", f"{datos_tutor['Avance %']}%")
+        
+        fig_pie = px.pie(values=[datos_tutor["YAPE"], datos_tutor["EFECTIVO"]], names=["Yape", "Efectivo"], hole=0.5)
+        st.plotly_chart(fig_pie, use_container_width=True)
+    else:
+        st.warning("Selecciona un tutor válido del gráfico.")
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
@@ -275,4 +282,4 @@ elif menu == "🤖 Análisis Académico":
         <p>📊 Según el último examen de tu salón, debes reforzar urgentemente los cursos de <b>{cursos_bajos}</b>, los cuales presentaron mayor dificultad.</p>
         <p>🚀 <i>Estrategia recomendada: Aplica simulacros cronometrados semanales y tutorías personalizadas para los alumnos con más faltas. ¡Vamos por esos cachimbos!</i></p>
     </div>
-    """, unsafe_allow_html=True) 
+    """, unsafe_allow_html=True)  
