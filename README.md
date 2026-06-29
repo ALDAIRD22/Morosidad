@@ -489,7 +489,7 @@
             const tbody = document.getElementById('table-body-morosidad');
             tbody.innerHTML = '';
             data.forEach(row => {
-                let badgeClass = "bg-slate-800 text-slate-300";
+                let badgeClass = "bg-indigo-600 text-white border border-indigo-400/40";
                 if(row.condicion.toUpperCase().includes("VIERNES")) badgeClass = "bg-amber-500/10 text-amber-400 border border-amber-500/20";
                 if(row.condicion.toUpperCase().includes("RETIRO")) badgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/20";
 
@@ -580,7 +580,7 @@
                 tbodyFiltered.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-emerald-400/70 font-medium bg-emerald-500/5">🎉 ¡Excelente! Este tutor no registra alumnos con alertas o deudas pendientes.</td></tr>`;
             } else {
                 filteredStudents.forEach(row => {
-                    let badgeClass = "bg-slate-800 text-slate-300";
+                    let badgeClass = "bg-indigo-600 text-white border border-indigo-400/40";
                     if(row.condicion.toUpperCase().includes("VIERNES")) badgeClass = "bg-amber-500/10 text-amber-400 border border-amber-500/20";
                     if(row.condicion.toUpperCase().includes("RETIRO")) badgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/20";
 
