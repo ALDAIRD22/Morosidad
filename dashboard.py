@@ -1,162 +1,236 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import time
+import random
 
 # ==========================================
 # CONFIGURACIÓN DE LA PÁGINA
 # ==========================================
-st.set_page_config(page_title="Dashboard Académico 2026", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Dashboard Comas 2026", page_icon="🔥", layout="wide")
 
 # ==========================================
-# ESTILOS CSS PARA TRANSICIONES VISUALES
+# ESTILOS CSS AVANZADOS
 # ==========================================
 st.markdown("""
     <style>
-    /* Animación de entrada (Fade In y deslizamiento) */
-    @keyframes slideIn {
-        0% { opacity: 0; transform: translateY(20px); }
-        100% { opacity: 1; transform: translateY(0); }
+    @keyframes fadeIn {
+        0% { opacity: 0; transform: scale(0.9); }
+        100% { opacity: 1; transform: scale(1); }
     }
-    .main .block-container {
-        animation: slideIn 0.8s ease-out;
+    .fade-in-text {
+        animation: fadeIn 1s ease-in-out;
+        text-align: center;
     }
-    /* Estilo para tarjetas de métricas */
+    .title-comas {
+        font-size: 3rem;
+        font-weight: 900;
+        background: -webkit-linear-gradient(45deg, #FF4B2B, #FF416C);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
+        padding: 20px;
+    }
     div[data-testid="metric-container"] {
-        background-color: #f8f9fa;
-        border: 1px solid #e9ecef;
+        background-color: #ffffff;
+        border-left: 5px solid #FF4B2B;
         padding: 15px;
-        border-radius: 10px;
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+        border-radius: 5px;
+        box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
         transition: transform 0.3s;
     }
     div[data-testid="metric-container"]:hover {
         transform: translateY(-5px);
     }
+    .ia-box {
+        background-color: #f0f2f6;
+        border-radius: 10px;
+        padding: 20px;
+        border-left: 5px solid #4CAF50;
+        font-style: italic;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# FUNCIÓN PARA CARGAR DATOS (Simulados basados en tu Excel)
+# CARGA DE DATOS (Basado en tus hojas)
 # ==========================================
 @st.cache_data
 def load_data():
-    # En producción, aquí conectarías con pd.read_csv() o la API de Google Sheets.
-    # Simulamos los datos basados en tu estructura:
+    # 1. Datos de Olimpiadas
+    df_olim = pd.DataFrame({
+        "Tutor": ["LESLY", "MAJA", "RODRIGO", "ALEXANDER", "GABY", "CINTHYA", "NATALY", "MARIANA"],
+        "Ciclo": ["SAN EN", "MATE SABATINO", "SAN MAYO", "SAN ABRIL", "INT ABRIL", "INT MARZO", "SAN MAR A", "SAN MAR B"],
+        "Matriculados": [63, 46, 84, 48, 32, 78, 74, 62],
+        "Meta": [60, 45, 80, 45, 30, 75, 70, 60],
+        "Pagantes": [59, 37, 59, 29, 32, 78, 74, 62],
+        "EFECTIVO": [1000, 500, 1200, 400, 600, 1500, 1400, 1100],
+        "YAPE": [500, 240, 800, 180, 360, 840, 820, 760]
+    })
+    df_olim["Recaudado"] = df_olim["EFECTIVO"] + df_olim["YAPE"]
+    df_olim["Meta Dinero"] = df_olim["Meta"] * 30 # Asumiendo cuota olimpiadas
     
-    df_olimpiadas = pd.DataFrame({
-        "Tutor": ["GARCIA", "MARTINEZ", "BOZA", "SANCHEZ", "ALCARRAZ", "CARRERA", "ESPADA"],
-        "Ciclo": ["SEMI ENERO", "SEMI MARZO-A", "SEMI MARZO-B", "INT MARZO-A", "SEMI ABRIL-A", "INT ABRIL-A", "SAN JUNIO"],
-        "Meta Dinero": [1530, 1770, 1530, 1860, 1140, 780, 2460],
-        "Recaudado": [1530, 1800, 930, 1890, 600, 780, 1005],
-        "Avance %": [100, 102, 61, 102, 53, 100, 41]
+    # 2. Datos de Morosidad - Resumen
+    df_mor_resumen = pd.DataFrame({
+        "Tutor": ["LESLY", "MAJA", "RODRIGO", "ALEXANDER", "GABY", "CINTHYA", "NATALY", "MARIANA"],
+        "MAT": [63, 46, 84, 48, 32, 78, 74, 62],
+        "PAG": [59, 37, 59, 29, 32, 78, 74, 62],
+        "SUS": [4, 9, 25, 19, 0, 0, 0, 0],
+        "DES": ["6.3%", "19.6%", "29.8%", "39.6%", "0.0%", "0.0%", "0.0%", "0.0%"],
+        "CUM": ["93.7%", "80.4%", "70.2%", "60.4%", "100%", "100%", "100%", "100%"],
+        "NOT": [20, 10, 10, 10, 20, 20, 20, 20]
     })
     
-    df_analisis = pd.DataFrame({
-        "Tutor": ["GARCIA", "MARTINEZ", "BOZA", "SANCHEZ", "ALCARRAZ"] * 10,
-        "Nota": [15, 12, 18, 14, 10, 16, 11, 19, 13, 9] * 5,
-        "Asistencia": [100, 80, 95, 85, 70, 100, 75, 90, 80, 60] * 5
+    # 3. Datos de Morosidad - Alumnos
+    df_mor_alumnos = pd.DataFrame({
+        "DNI": ["72831111", "75302957", "73565909", "61423613", "72053356", "61462066"],
+        "ALUMNO": ["CASTILLO VARGAS JOANN", "MENDOZA ARONI FABRICIO", "SANGAMA RAMIREZ ISAIAS", "SALAZAR TORRES ESTHEFANY", "SAAVEDRA CHAVEZ DARIANA", "LOBATO SALDIVAR ERIKA"],
+        "Tutor": ["Lesly", "Lesly", "Rodrigo", "Rodrigo", "Rodrigo", "Rodrigo"],
+        "CONDICIÓN PAGO": ["PAGA VIERNES", "PAGA VIERNES", "PAGA VIERNES", "PAGA VIERNES", "PAGA VIERNES", "RETIRO"]
     })
     
-    return df_olimpiadas, df_analisis
+    # 4. Datos de Cuotas
+    df_cuotas = pd.DataFrame({
+        "CUOTA": [1, 2, 3, 4, 5, 6, 7],
+        "SAN MAR": ["16-mar", "11-abr", "9-may", "6-jun", "4-jul", "8-ago", "5-sep"],
+        "SAN ABR": ["6-abr", "2-may", "30-may", "27-jun", "1-ago", "29-ago", "-"],
+        "SAN MAY": ["4-may", "30-may", "27-jun", "1-ago", "-", "-", "-"]
+    })
+    
+    return df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas
 
-df_olim, df_ana = load_data()
+df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas = load_data()
 
 # ==========================================
 # BARRA LATERAL (NAVEGACIÓN)
 # ==========================================
 st.sidebar.image("https://cdn-icons-png.flaticon.com/512/3048/3048122.png", width=100)
-st.sidebar.title("Navegación")
+st.sidebar.title("Menú Principal")
 menu = st.sidebar.radio(
-    "Selecciona un módulo:",
-    ("🏆 Olimpiadas (Finanzas)", "⚠️ Morosidad", "📈 Análisis Académico")
+    "Navegación:",
+    ("🏠 Inicio", "🏆 Olimpiadas", "⚠️ Morosidad", "🤖 Análisis Académico")
 )
 
 # ==========================================
-# PÁGINA 1: OLIMPIADAS (FINANZAS)
+# PÁGINA 1: INICIO
 # ==========================================
-if menu == "🏆 Olimpiadas (Finanzas)":
-    st.title("Recaudación y Metas Financieras")
-    st.markdown("Seguimiento de pagos, yape y efectivo por tutor.")
+if menu == "🏠 Inicio":
+    st.balloons()
+    st.markdown('<div class="fade-in-text">', unsafe_allow_html=True)
+    st.markdown('<p class="title-comas">¡BIENVENIDO A LA SEDE COMAS!</p>', unsafe_allow_html=True)
+    st.markdown('<h2>🔥 LA MEJOR SEDE - LA NÚMERO 1 🔥</h2>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
     
-    # Cuadros Estadísticos
-    col1, col2, col3 = st.columns(3)
-    total_meta = df_olim["Meta Dinero"].sum()
-    total_recaudado = df_olim["Recaudado"].sum()
-    avance_global = (total_recaudado / total_meta) * 100
-    
-    col1.metric("Meta Total", f"S/ {total_meta:,.2f}")
-    col2.metric("Recaudado Total", f"S/ {total_recaudado:,.2f}", f"S/ {total_recaudado - total_meta:,.2f}")
-    col3.metric("Avance Global", f"{avance_global:.1f}%")
-    
-    st.divider()
-    
-    # Gráfico interactivo con Plotly (Transiciones automáticas)
-    st.subheader("Avance de Recaudación por Tutor")
-    fig1 = px.bar(
-        df_olim, 
-        x="Tutor", 
-        y=["Meta Dinero", "Recaudado"], 
-        barmode="group",
-        color_discrete_sequence=["#1f77b4", "#2ca02c"],
-        text_auto='.2s'
-    )
-    fig1.update_layout(transition_duration=500) # Animación nativa de Plotly
-    st.plotly_chart(fig1, use_container_width=True)
+    st.image("https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80", use_column_width=True)
+    st.info("💡 Selecciona un módulo en el menú de la izquierda para comenzar a analizar los datos de la sede.")
 
 # ==========================================
-# PÁGINA 2: MOROSIDAD
+# PÁGINA 2: OLIMPIADAS
+# ==========================================
+elif menu == "🏆 Olimpiadas":
+    st.title("🏆 Recaudación Olimpiadas")
+    
+    # Gráfico general
+    fig = px.bar(df_olim, x="Tutor", y=["YAPE", "EFECTIVO"], title="Recaudación Total por Tutor (Yape vs Efectivo)", text_auto=True)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    st.subheader("🔎 Detalle Interactivo por Tutor")
+    st.write("Selecciona un tutor para ver su rendimiento específico:")
+    
+    tutor_seleccionado = st.selectbox("Elegir Tutor:", ["Todos"] + list(df_olim["Tutor"].unique()))
+    
+    if tutor_seleccionado != "Todos":
+        datos_tutor = df_olim[df_olim["Tutor"] == tutor_seleccionado].iloc[0]
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Matriculados vs Meta", f"{datos_tutor['Matriculados']} / {datos_tutor['Meta']}")
+        col2.metric("Pagantes", datos_tutor['Pagantes'])
+        col3.metric("Recaudado Total", f"S/ {datos_tutor['Recaudado']}")
+        
+        # Desglose Yape vs Efectivo
+        fig_pie = px.pie(values=[datos_tutor["YAPE"], datos_tutor["EFECTIVO"]], names=["Yape", "Efectivo"], hole=0.5, title=f"Distribución de Pagos - {tutor_seleccionado}")
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+# ==========================================
+# PÁGINA 3: MOROSIDAD
 # ==========================================
 elif menu == "⚠️ Morosidad":
-    st.title("Estado de Pagos y Morosidad")
-    st.markdown("Control de alumnos con cuotas pendientes y suspensiones.")
+    st.title("⚠️ Panel de Morosidad y Pagos")
     
-    # Simulador de carga para efecto visual
-    with st.spinner('Cargando registros de morosidad...'):
-        time.sleep(0.5)
+    # Cálculos globales (Basados en fila TOTAL de tu Excel: MAT 552, PAG 467, SUS 85)
+    total_mat = df_mor_resumen["MAT"].sum()
+    total_pag = df_mor_resumen["PAG"].sum()
+    total_sus = df_mor_resumen["SUS"].sum()
+    deuda_acumulada = total_sus * 510 # Suspendidos/Deserción x 510
     
-    # Cuadros Estadísticos diferentes
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Alumnos en Riesgo", "45", "+5 esta semana", delta_color="inverse")
-    col2.metric("Deuda Acumulada", "S/ 4,500.00")
-    col3.metric("Suspendidos", "12")
+    st.subheader("Resumen Global de la Sede")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Matriculados (MAT)", total_mat)
+    col2.metric("Pagantes (PAG)", total_pag)
+    col3.metric("Suspendidos (SUS/DES)", total_sus)
+    col4.metric("Deuda Acumulada", f"S/ {deuda_acumulada:,.2f}", "- Crítico", delta_color="inverse")
     
     st.divider()
     
-    # Gráfico de Anillo
-    st.subheader("Distribución por Condición de Pago")
-    labels = ['Al Día', 'Debe 1 Cuota', 'Debe 2+ Cuotas', 'Suspendidos']
-    values = [350, 80, 24, 12]
-    fig2 = px.pie(names=labels, values=values, hole=0.4, color_discrete_sequence=px.colors.sequential.RdBu_r)
-    fig2.update_traces(textposition='inside', textinfo='percent+label')
-    st.plotly_chart(fig2, use_container_width=True)
+    col_izq, col_der = st.columns([1.5, 1])
+    
+    with col_izq:
+        st.subheader("📅 Cuadro de Pagos (Fechas)")
+        st.dataframe(df_cuotas, use_container_width=True, hide_index=True)
+        
+        st.subheader("📊 Rendimiento por Tutor (MAT, PAG, CUM, NOT)")
+        st.dataframe(df_mor_resumen, use_container_width=True, hide_index=True)
+
+    with col_der:
+        st.subheader("🚨 Alumnos Morosos")
+        st.write("Despliega para ver la lista de alumnos que no pagan:")
+        with st.expander("Ver Lista Completa de Morosos 🔽", expanded=True):
+            st.dataframe(df_mor_alumnos, use_container_width=True, hide_index=True)
 
 # ==========================================
-# PÁGINA 3: ANÁLISIS ACADÉMICO
+# PÁGINA 4: ANÁLISIS ACADÉMICO (IA)
 # ==========================================
-elif menu == "📈 Análisis Académico":
-    st.title("Asistencia y Rendimiento")
-    st.markdown("Relación entre la asistencia a clases y las notas de los exámenes.")
+elif menu == "🤖 Análisis Académico":
+    st.title("🤖 Asistente de Análisis de Rendimiento")
+    st.markdown("Selecciona un tutor para que la IA genere un análisis automático de su salón.")
     
-    col1, col2 = st.columns(2)
-    col1.metric("Promedio General (Notas)", f"{df_ana['Nota'].mean():.1f} / 20")
-    col2.metric("Asistencia Promedio", f"{df_ana['Asistencia'].mean():.1f}%")
+    tutor_ia = st.selectbox("Analizar salón a cargo de:", df_mor_resumen["Tutor"].unique())
+    datos_ia = df_mor_resumen[df_mor_resumen["Tutor"] == tutor_ia].iloc[0]
+    
+    with st.spinner("La IA está analizando los datos del tutor..."):
+        time.sleep(1.5) # Simula tiempo de procesamiento de IA
+        
+    # Generación de texto dinámico "Tipo IA"
+    cumplimiento = float(datos_ia["CUM"].replace("%", ""))
+    nota = datos_ia["NOT"]
+    
+    diagnostico = "Excelente" if cumplimiento >= 85 else "Regular" if cumplimiento >= 60 else "Crítico"
+    recomendacion = "Mantener las estrategias de retención actuales." if diagnostico == "Excelente" else "Se requiere intervención urgente. Llamar a los apoderados de los alumnos suspendidos para negociar pagos."
+    
+    st.markdown(f"""
+    <div class="ia-box">
+        <h4>🧠 Insight Generado por IA para {tutor_ia}</h4>
+        <p><strong>Diagnóstico de Salón:</strong> Nivel {diagnostico}</p>
+        <p>El salón del tutor <b>{tutor_ia}</b> tiene actualmente <b>{datos_ia['MAT']}</b> alumnos matriculados. 
+        Se registra un total de <b>{datos_ia['SUS']}</b> alumnos suspendidos/desertores, lo que representa una tasa de deserción del <b>{datos_ia['DES']}</b>.</p>
+        <p>El nivel de cumplimiento de pagos es del <b>{datos_ia['CUM']}</b> y la nota de evaluación de gestión es <b>{nota}/20</b>.</p>
+        <p><b>💡 Recomendación de la IA:</b> {recomendacion}</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     st.divider()
     
-    # Gráfico de dispersión (Scatter plot)
-    st.subheader("Impacto de la Asistencia en la Nota")
-    fig3 = px.scatter(
-        df_ana, 
-        x="Asistencia", 
-        y="Nota", 
-        color="Tutor", 
-        size="Nota",
-        hover_data=['Tutor'],
-        trendline="ols" # Línea de tendencia
-    )
-    st.plotly_chart(fig3, use_container_width=True)
+    # Gráfico interactivo tipo Radar para el tutor
+    st.subheader(f"Perfil de Gestión: {tutor_ia}")
+    categorias = ['Matriculados', 'Pagantes', 'Cumplimiento (%)', 'Nota (x5)']
+    valores = [datos_ia['MAT'], datos_ia['PAG'], cumplimiento, nota * 5] # Multiplicado para igualar escala visual
     
-    # Mostrar tabla de datos con estilo
-    st.subheader("Detalle de Registros")
-    st.dataframe(df_ana.head(10), use_container_width=True)
+    fig_radar = go.Figure(data=go.Scatterpolar(
+      r=valores,
+      theta=categorias,
+      fill='toself',
+      line_color='#FF4B2B'
+    ))
+    fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=False)
+    st.plotly_chart(fig_radar, use_container_width=True)
