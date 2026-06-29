@@ -174,7 +174,7 @@
                                 <th class="py-3.5 px-4 text-center">Nota</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-800/40 font-semibold text-slate-300" id="table-body-desercion"></tbody>
+                        <tbody class="divide-y divide-slate-300 font-semibold text-slate-800" id="table-body-desercion"></tbody>
                     </table>
                 </div>
             </section>
@@ -206,7 +206,7 @@
                                 <th class="py-3.5 px-4">Motivos / Comentarios</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-800/40 font-semibold text-slate-300" id="table-body-morosidad"></tbody>
+                        <tbody class="divide-y divide-slate-300 font-semibold text-slate-800" id="table-body-alertas"></tbody>
                     </table>
                 </div>
             </div>
