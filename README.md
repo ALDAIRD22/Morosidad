@@ -42,14 +42,13 @@
     </style>
 </head>
 <body class="text-slate-100 min-h-screen antialiased">
-
     <!-- PANTALLA DE BIENVENIDA (SPLASH SCREEN) -->
     <div id="welcome-overlay" class="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-2xl flex items-center justify-center transition-opacity duration-700 opacity-100">
         <div class="text-center space-y-6 transform transition-all scale-100 animate-pulse" id="welcome-content">
             <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 shadow-[0_0_40px_rgba(99,102,241,0.4)] mb-2">
                 <span class="text-5xl text-white font-black">V</span>
             </div>
-            <h2 class="text-3xl font-extrabold text-white tracking-tight">Control de Alumnos Vonex 2026</h2>
+            <h2 class="text-3xl font-extrabold text-white tracking-tight uppercase">SEDE COMAS ¡LOS MEJORES!</h2>
             <div class="flex flex-col items-center justify-center space-y-3 mt-6">
                 <p id="welcome-loading" class="text-slate-400 font-medium tracking-widest uppercase text-sm">Procesando métricas en vivo...</p>
                 <div id="welcome-stats" class="hidden flex-col items-center space-y-2 mt-2">
@@ -68,8 +67,8 @@
             <div class="flex items-center space-x-3.5">
                 <div class="bg-indigo-600 p-2 rounded-lg text-white font-bold text-xl tracking-wider">V</div>
                 <div>
-                    <h1 class="text-lg font-bold text-white tracking-tight">CONTROL MATRÍCULAS Y MOROSIDAD</h1>
-                    <p class="text-xs text-slate-400">Sincronizado con Google Sheets</p>
+                    <h1 class="text-lg font-bold text-white tracking-tight uppercase">SEDE COMAS ¡LOS MEJORES!</h1>
+                    <p class="text-xs text-slate-400">Control de pagos automatizado</p>
                 </div>
             </div>
             <div class="flex items-center space-x-2.5">
@@ -90,7 +89,6 @@
     </div>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        
         <!-- MENÚ DE NAVEGACIÓN POR TARJETAS -->
         <nav class="grid grid-cols-2 lg:grid-cols-4 gap-5">
             <button onclick="switchTab('view-desercion')" id="btn-view-desercion" class="nav-card premium-card text-left rounded-2xl p-5 border-indigo-500/40 bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-lg shadow-indigo-500/5">
@@ -154,7 +152,7 @@
                     </div>
                 </div>
             </div>
-
+            
             <!-- Tabla de Detalle de Deserción -->
             <section class="premium-card rounded-2xl overflow-hidden shadow-2xl">
                 <div class="p-5 border-b border-slate-800/80 bg-slate-950/20">
@@ -192,7 +190,6 @@
                         <input type="text" id="search-moro" oninput="filterMoroTable()" placeholder="Buscar alumno o tutor..." class="bg-slate-950/60 border border-slate-800 text-slate-200 text-xs rounded-xl px-4 py-2.5 w-full md:w-64 focus:outline-none focus:border-indigo-500 transition-colors">
                     </div>
                 </div>
-
                 <div class="w-full overflow-x-auto">
                     <table class="w-full text-left border-collapse text-xs">
                         <thead>
@@ -225,7 +222,6 @@
                     </select>
                 </div>
             </div>
-
             <!-- Contenedor de Métricas del Tutor Filtrado -->
             <div id="tutor-filtered-metrics" class="hidden grid grid-cols-1 md:grid-cols-4 gap-5">
                 <div class="premium-card rounded-xl p-4 bg-slate-900/20">
@@ -245,7 +241,6 @@
                     <h4 class="text-2xl font-black text-indigo-400 mt-1" id="f-tutor-cum">0%</h4>
                 </div>
             </div>
-
             <!-- Tabla de Alumnos asignados al Tutor Filtrado -->
             <div class="premium-card rounded-2xl p-6 shadow-xl">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Alumnos con Alertas Vinculados</h3>
@@ -281,24 +276,18 @@
                 <div class="w-full overflow-x-auto">
                     <table class="w-full text-left border-collapse text-xs">
                         <thead>
-                            <tr class="bg-slate-950 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 text-[10px]" id="table-head-cuotas">
-                            </tr>
+                            <tr class="bg-slate-950 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 text-[10px]" id="table-head-cuotas"></tr>
                         </thead>
                         <tbody class="divide-y divide-slate-800/40 font-semibold text-slate-300" id="table-body-cuotas"></tbody>
                     </table>
                 </div>
             </div>
         </div>
-
     </main>
 
     <script>
         const SHEET_JSON_URL = 'https://docs.google.com/spreadsheets/d/1iwQyWd5KQZHBtURWKIMC2MXrFSNyeSF2/gviz/tq?tqx=out:json&gid=700846667';
-
-        let chartBar = null;
-        let chartPie = null;
         let isFirstLoad = true;
-        
         let cachedDesercionRows = [];
         let moroDataCached = [];
 
@@ -325,9 +314,7 @@
             if (cell.v !== null && cell.v !== undefined) {
                 let num = parseFloat(cell.v);
                 if (!isNaN(num)) {
-                    if (num >= -1 && num <= 1) {
-                        return (num * 100).toFixed(1) + '%';
-                    }
+                    if (num >= -1 && num <= 1) return (num * 100).toFixed(1) + '%';
                     return num.toFixed(1) + '%';
                 }
             }
@@ -359,69 +346,123 @@
 
                 cachedDesercionRows = [];
                 moroDataCached = [];
-                let cuotasHeaders = ["CUOTA", "SAN MAR", "INT MAR", "SAN ABR", "INT ABR", "SAN MAY", "INT MAY", "SAN JUL", "REP JUL", "SAN ENE"];
+                let cuotasHeaders = [];
                 let cuotasBodyRows = [];
 
                 let totalMat = 0, totalPag = 0, totalDes = 0, totalCum = 95;
 
-                // RECORRIDO MATRICIAL DE FILAS SEGURO (START i=0)
+                // ==========================================
+                // ESCÁNER MATRICIAL DINÁMICO DE COLUMNAS
+                // ==========================================
+                let idxCiclo = 1, idxTutor = 2, idxMat = 3, idxPag = 4, idxSus = 5, idxDes = 6, idxCum = 7, idxNot = 8;
+                let idxCuotaCol = 12;
+                let idxMoroNum = 24, idxMoroDni = 25, idxMoroAlumno = 26, idxMoroCorte = 27, idxMoroTutor = 28, idxMoroCond = 29, idxMoroMotiv = 30;
+
+                for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                    if (!rows[i] || !rows[i].c) continue;
+                    let tokens = rows[i].c.map(cell => safeString(cell).toUpperCase());
+                    
+                    let pos = tokens.indexOf('CICLO');
+                    if (pos !== -1 && pos < 4) {
+                        idxCiclo = pos;
+                        idxTutor = tokens.indexOf('TUTO') !== -1 ? tokens.indexOf('TUTO') : pos + 1;
+                        idxMat = tokens.indexOf('MAT') !== -1 ? tokens.indexOf('MAT') : pos + 2;
+                        idxPag = tokens.indexOf('PAG') !== -1 ? tokens.indexOf('PAG') : pos + 3;
+                        idxSus = tokens.indexOf('SUS') !== -1 ? tokens.indexOf('SUS') : pos + 4;
+                        idxDes = tokens.indexOf('DES') !== -1 ? tokens.indexOf('DES') : pos + 5;
+                        idxCum = tokens.indexOf('CUM') !== -1 ? tokens.indexOf('CUM') : pos + 6;
+                        idxNot = tokens.indexOf('NOT') !== -1 ? tokens.indexOf('NOT') : pos + 7;
+                    }
+                    let qIdx = tokens.indexOf('CUOTA');
+                    if (qIdx !== -1) idxCuotaCol = qIdx;
+
+                    let dIdx = tokens.indexOf('DNI');
+                    if (dIdx !== -1 && dIdx > 15) {
+                        idxMoroDni = dIdx;
+                        idxMoroNum = tokens.indexOf('#') !== -1 ? tokens.indexOf('#') : dIdx - 1;
+                        idxMoroAlumno = tokens.indexOf('ALUMNO') !== -1 ? tokens.indexOf('ALUMNO') : dIdx + 1;
+                        idxMoroCorte = tokens.indexOf('CORTE') !== -1 ? tokens.indexOf('CORTE') : dIdx + 2;
+                        idxMoroTutor = tokens.findIndex((v, idx) => idx > idxMoroAlumno && (v.includes('TUTOR') || v.includes('TUTO')));
+                        if(idxMoroTutor === -1) idxMoroTutor = dIdx + 3;
+                        let condIdx = tokens.findIndex(v => v.includes('CONDI') || v.includes('PAGO'));
+                        idxMoroCond = condIdx !== -1 ? condIdx : dIdx + 4;
+                        idxMoroMotiv = tokens.indexOf('MOTIVOS') !== -1 ? tokens.indexOf('MOTIVOS') : dIdx + 5;
+                    }
+                }
+
+                // Capturar cabeceras de cuotas de pagos reales (Fila 4)
+                let cuotasHeaderRow = rows.find(r => r && r.c && safeString(r.c[idxCuotaCol]).toUpperCase() === 'CUOTA');
+                if (cuotasHeaderRow) {
+                    for (let c = idxCuotaCol; c < cuotasHeaderRow.c.length; c++) {
+                        let hVal = safeString(cuotasHeaderRow.c[c]);
+                        if (!hVal) break;
+                        cuotasHeaders.push(hVal);
+                    }
+                }
+
+                let desDataStarted = false;
+
                 for (let i = 0; i < rows.length; i++) {
                     const row = rows[i];
                     if (!row || !row.c) continue;
 
-                    // 1. Extraer Deserción por Ciclo (B3:J15) -> Indices fijos 1 a 9
-                    let cicloName = safeString(row.c[2]); 
-                    if (cicloName && cicloName.toUpperCase() !== 'CICLO') {
-                        if (cicloName.toUpperCase().includes('TOTAL')) {
-                            totalMat = getVal(row.c[4], true);
-                            totalPag = getVal(row.c[5], true);
-                            totalDes = getVal(row.c[6], true);
-                            if (row.c[8]) {
-                                let v = row.c[8].v;
+                    // 1. Extraer Deserción por Ciclo (Arranca seguro desde Lesly en i=0)
+                    let cicloVal = safeString(row.c[idxCiclo]);
+                    if (cicloVal.toUpperCase() === 'CICLO') {
+                        desDataStarted = true;
+                        continue;
+                    }
+                    if (desDataStarted) {
+                        if (cicloVal.toUpperCase().includes('TOTAL')) {
+                            totalMat = getVal(row.c[idxMat], true);
+                            totalPag = getVal(row.c[idxPag], true);
+                            totalDes = getVal(row.c[idxSus], true);
+                            if (row.c[idxCum]) {
+                                let v = row.c[idxCum].v;
                                 totalCum = (typeof v === 'number' && v <= 1) ? v * 100 : parseFloat(v) || 95;
                             }
-                        } else if (!cicloName.toUpperCase().includes('VENCIMIENTO')) {
+                            desDataStarted = false; 
+                        } else if (cicloVal !== '' && !cicloVal.toUpperCase().includes('VENCIMIENTO')) {
                             cachedDesercionRows.push({
-                                ciclo: cicloName,
-                                tutor: safeString(row.c[3]),
-                                matriculados: getVal(row.c[4], true),
-                                pagantes: getVal(row.c[5], true),
-                                suspendidos: getVal(row.c[6], true),
-                                desercion: safePercent(row.c[7]),
-                                cumplimiento: safePercent(row.c[8]),
-                                nota: safeString(row.c[9])
+                                ciclo: cicloVal,
+                                tutor: safeString(row.c[idxTutor]),
+                                matriculados: getVal(row.c[idxMat], true),
+                                pagantes: getVal(row.c[idxPag], true),
+                                suspendidos: getVal(row.c[idxSus], true),
+                                desercion: safePercent(row.c[idxDes]),
+                                cumplimiento: safePercent(row.c[idxCum]),
+                                nota: safeString(row.c[idxNot])
                             });
                         }
                     }
 
-                    // 2. Extraer Morosidad Completa (Y3:AE1000) -> Indices fijos 24 a 30
-                    let mDni = safeString(row.c[25]); 
-                    let mAlum = safeString(row.c[26]); 
+                    // 2. Extraer Morosidad Completa (Y3:AE1000)
+                    let mDni = safeString(row.c[idxMoroDni]);
+                    let mAlum = safeString(row.c[idxMoroAlumno]);
                     if (mDni && mDni.toUpperCase() !== 'DNI' && mAlum && mAlum.toUpperCase() !== 'ALUMNO') {
                         moroDataCached.push({
-                            num: row.c[24] ? safeString(row.c[24]) : (moroDataCached.length + 1),
+                            num: row.c[idxMoroNum] ? safeString(row.c[idxMoroNum]) : (moroDataCached.length + 1),
                             dni: mDni,
                             alumno: mAlum,
-                            corte: safeString(row.c[27]),
-                            tutor: safeString(row.c[28]),
-                            condicion: safeString(row.c[29]),
-                            motivos: safeString(row.c[30])
+                            corte: safeString(row.c[idxMoroCorte]),
+                            tutor: safeString(row.c[idxMoroTutor]),
+                            condicion: safeString(row.c[idxMoroCond]),
+                            motivos: safeString(row.c[idxMoroMotiv])
                         });
                     }
 
-                    // 3. Extraer Cronograma de Cuotas de Pago (M5:V11) -> Indices fijos 12 a 21
-                    let cuotaCell = safeString(row.c[12]); 
-                    if (cuotaCell && !isNaN(cuotaCell) && cuotaCell !== '' && i >= 4 && i <= 12) {
+                    // 3. Extraer Cronograma de Cuotas (M5:V11)
+                    let cuotaCell = safeString(row.c[idxCuotaCol]);
+                    if (cuotaCell && !isNaN(cuotaCell) && cuotasHeaders.length > 0 && cuotasHeaderRow && i > rows.indexOf(cuotasHeaderRow)) {
                         let cells = [];
-                        cells.push(cuotaCell);
-                        for (let k = 13; k <= 21; k++) {
-                            cells.push(row.c[k] ? safeString(row.c[k]) : '-');
+                        for (let k = 0; k < cuotasHeaders.length; k++) {
+                            cells.push(safeString(row.c[idxCuotaCol + k]) || '-');
                         }
                         cuotasBodyRows.push(cells);
                     }
                 }
 
-                // Renderizar KPI de cabecera superiores
+                // Renderizar KPI Globales en enteros
                 document.getElementById('lbl-total-mat').innerText = Math.round(totalMat);
                 document.getElementById('lbl-total-pag').innerText = Math.round(totalPag);
                 document.getElementById('lbl-total-des').innerText = Math.round(totalDes);
@@ -431,7 +472,7 @@
                 if (isFirstLoad) {
                     document.getElementById('welcome-avance').innerText = Math.round(totalCum) + '% Cumplimiento';
                     let faltaProgreso = 100 - totalCum;
-                    document.getElementById('welcome-falta').innerText = `Falta ${Math.round(faltaProgreso)}% para el óptimo`;
+                    document.getElementById('welcome-falta').innerText = `Falta ${Math.round(faltaProgreso)}%`;
                     
                     document.getElementById('welcome-loading').classList.add('hidden');
                     document.getElementById('welcome-stats').classList.remove('hidden');
@@ -470,7 +511,7 @@
             tbody.innerHTML = '';
             data.forEach(row => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-800/30 transition-colors border-b border-slate-800/40";
+                tr.className = "hover:bg-slate-800/30 transition-colors border-b border-slate-800/40 text-xs font-semibold";
                 tr.innerHTML = `
                     <td class="py-3 px-4 font-bold text-slate-100 whitespace-nowrap">${row.ciclo}</td>
                     <td class="py-3 px-4 text-slate-400 font-medium">${row.tutor}</td>
@@ -479,7 +520,7 @@
                     <td class="py-3 px-4 text-center text-amber-500 font-bold">${Math.round(row.suspendidos)}</td>
                     <td class="py-3 px-4 text-center text-rose-400 font-extrabold bg-rose-500/5">${row.desercion}</td>
                     <td class="py-3 px-4 text-center text-indigo-400 font-extrabold bg-indigo-500/5">${row.cumplimiento}</td>
-                    <td class="py-3 px-4 text-center text-slate-400">${row.nota}</td>
+                    <td class="py-3 px-4 text-center text-slate-400 font-normal">${row.nota}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -494,7 +535,7 @@
                 if(row.condicion.toUpperCase().includes("RETIRO")) badgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/20";
 
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-800/30 transition-colors border-b border-slate-800/40";
+                tr.className = "hover:bg-slate-800/30 transition-colors border-b border-slate-800/40 font-semibold";
                 tr.innerHTML = `
                     <td class="py-3 px-4 font-bold text-slate-500">${row.num}</td>
                     <td class="py-3 px-4 text-slate-400 font-mono tracking-wider">${row.dni}</td>
@@ -595,7 +636,7 @@
                         <td class="py-3 px-4 text-center">
                             <span class="px-2 py-1 rounded-md text-[10px] font-extrabold uppercase ${badgeClass}">${row.condicion}</span>
                         </td>
-                        <td class="py-3 px-4 text-slate-400 italic font-normal">${row.motivos}</td>
+                        <td class="py-3 px-4 text-slate-400 italic">${row.motivos}</td>
                     `;
                     tbodyFiltered.appendChild(tr);
                 });
@@ -631,76 +672,75 @@
         }
 
         function renderCharts(data, complianceNum) {
-            const ctxBar = document.getElementById('chartDesercionBar').getContext('2d');
-            if (chartBar) chartBar.destroy();
+            try {
+                const ctxBar = document.getElementById('chartDesercionBar').getContext('2d');
+                if (chartBar) chartBar.destroy();
 
-            chartBar = new Chart(ctxBar, {
-                type: 'bar',
-                data: {
-                    labels: data.map(r => r.ciclo),
-                    datasets: [
-                        {
-                            label: 'Matriculados',
-                            data: data.map(r => r.matriculados),
-                            backgroundColor: 'rgba(99, 102, 241, 0.85)',
-                            borderRadius: 4
-                        },
-                        {
-                            label: 'Pagantes',
-                            data: data.map(r => r.pagantes),
-                            backgroundColor: 'rgba(16, 185, 129, 0.85)',
-                            borderRadius: 4
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans' } } }
+                chartBar = new Chart(ctxBar, {
+                    type: 'bar',
+                    data: {
+                        labels: data.map(r => r.ciclo),
+                        datasets: [
+                            {
+                                label: 'Matriculados',
+                                data: data.map(r => r.matriculados),
+                                backgroundColor: 'rgba(71, 85, 105, 0.4)',
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Pagantes Activos',
+                                data: data.map(r => r.pagantes),
+                                backgroundColor: '#0ea5e9',
+                                borderRadius: 4
+                            }
+                        ]
                     },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
-                        y: { 
-                            grid: { color: 'rgba(51, 65, 85, 0.2)' }, 
-                            ticks: { 
-                                color: '#94a3b8',
-                                precision: 0,
-                                stepSize: 10
-                            } 
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { labels: { color: '#94a3b8' } },
+                            datalabels: { display: false }
+                        },
+                        scales: {
+                            x: { grid: { color: 'rgba(255, 255, 255, 0.03)' }, ticks: { color: '#94a3b8', precision: 0 } },
+                            y: { ticks: { color: '#e2e8f0' } }
                         }
                     }
-                }
-            });
+                });
+            } catch(e) { console.error(e); }
 
-            const ctxPie = document.getElementById('chartDesercionPie').getContext('2d');
-            if (chartPie) chartPie.destroy();
+            try {
+                const ctxPie = document.getElementById('chartDesercionPie').getContext('2d');
+                if (chartPie) chartPie.destroy();
 
-            let rest = 100 - complianceNum;
-            if (rest < 0) rest = 0;
+                let rest = 100 - complianceNum;
+                if (rest < 0) rest = 0;
 
-            chartPie = new Chart(ctxPie, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Cumplimiento', 'Deserción / Pendiente'],
-                    datasets: [{
-                        data: [complianceNum, rest],
-                        backgroundColor: ['#6366f1', '#f43f5e'],
-                        borderColor: '#0f172a',
-                        borderWidth: 3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    cutout: '75%'
-                }
-            });
+                chartPie = new Chart(ctxPie, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Cumplimiento', 'Deserción'],
+                        datasets: [{
+                            data: [complianceNum, rest],
+                            backgroundColor: ['#22d3ee', '#6366f1'],
+                            borderColor: '#0f172a',
+                            borderWidth: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, datalabels: { display: false } },
+                        cutout: '75%'
+                    }
+                });
+            } catch(e) { console.error(e); }
         }
 
         loadAllDashboardData();
         setInterval(loadAllDashboardData, 60000);
     </script>
 </body>
-</html> 
+</html>
