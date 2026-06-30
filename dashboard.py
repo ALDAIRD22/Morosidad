@@ -113,7 +113,7 @@ def load_data():
             if col in df_olim.columns:
                 df_olim[col] = pd.to_numeric(df_olim[col].astype(str).str.replace(r'[S/,\s%]', '', regex=True).str.replace('-', '0'), errors='coerce').fillna(0)
 
-        # 1.5 TALLAS DE OLIMPIADAS (Fila 12)
+        # 1.5 TALLAS DE OLIMPIADAS
         df_tallas = pd.read_csv(url_olim, skiprows=11, usecols=range(0, 5))
         df_tallas.columns = ["Tutor", "S", "M", "L", "XL"]
         df_tallas = df_tallas.dropna(subset=["Tutor"])
@@ -249,9 +249,6 @@ elif menu == "🏆 Olimpiadas":
         
         st.divider()
         
-        # ==========================================
-        # NUEVO INDICADOR DE AUDITORÍA LOGÍSTICA DE IA (OPCIONES DE PERSUASIÓN)
-        # ==========================================
         nombre_tutor_greet = tutor_seleccionado.split()[0].capitalize()
         faltantes_insc = int(datos_tutor['Meta'] - datos_tutor['Pagantes'])
         monto_pendiente = datos_tutor['Falta']
@@ -265,7 +262,6 @@ elif menu == "🏆 Olimpiadas":
             </div>
             """, unsafe_allow_html=True)
         else:
-            # Personalizar estrategias detalladas basadas en el tutor o tipo de ciclo
             if "BOZA" in tutor_seleccionado.upper() or "MARIANA" in tutor_seleccionado.upper():
                 estrategia_ia = f"Apela al <b>sentido de pertenencia e identidad de grupo</b>. Al ser un ciclo semi anual, dedica 5 minutos al inicio de la sesión para concientizar que el aula necesita la participación colectiva. Pon un reto a corto plazo con los delegados."
             elif "ALCARRAZ" in tutor_seleccionado.upper() or "ALEXANDER" in tutor_seleccionado.upper():
@@ -338,7 +334,6 @@ elif menu == "🏆 Olimpiadas":
             
         st.divider()
         
-        # Inteligencia Artificial Integrada
         st.markdown(f"""
         <div class="ia-box">
             <h4>🧠 Auditoría Logística de Tallas por IA</h4>
@@ -347,7 +342,6 @@ elif menu == "🏆 Olimpiadas":
         </div>
         """, unsafe_allow_html=True)
         
-        # Gráfico comparativo visual
         df_chart_tallas = df_control.melt(id_vars=['Tutor'], value_vars=['Total Polos', 'Pagantes'], var_name='Concepto', value_name='Cantidad')
         fig_tallas_comp = px.bar(df_chart_tallas, x='Tutor', y='Cantidad', color='Concepto', barmode='group', color_discrete_sequence=["#1E3A8A", "#4CAF50"], title="Polos Solicitados vs Alumnos Pagantes")
         st.plotly_chart(fig_tallas_comp, use_container_width=True)
@@ -394,15 +388,72 @@ elif menu == "⚠️ Morosidad":
         estrellas_html = "".join([f"<span class='tutor-star'>⭐ {t}</span>" for t in tutores_20])
         st.markdown(f"<div class='hall-of-fame animate-up'><h3>🏆 SALÓN DE LA FAMA - NOTA 20 🏆</h3><p>¡Gestión perfecta!</p>{estrellas_html}</div>", unsafe_allow_html=True)
 
-    tab_mor1, tab_mor2, tab_mor3 = st.tabs(["📊 Deuda por Salón", "🚨 Lista Interactiva de Morosos", "📅 Cronograma de Cuotas"])
+    tab_mor1, tab_mor2, tab_mor3 = st.tabs(["📊 Análisis y Deuda por Salón", "🚨 Lista Interactiva de Morosos", "📅 Cronograma de Cuotas"])
     
     with tab_mor1:
+        # =========================================================
+        # NUEVO: CUADRO GENERAL DE MOROSIDAD (FECHA, CICLO, TUTO...)
+        # =========================================================
         st.markdown('<div class="web-card">', unsafe_allow_html=True)
-        df_mor_resumen['DEUDA_SALON'] = df_mor_resumen['SUS'] * 510
-        fig_deuda = px.bar(df_mor_resumen, x="TUTO", y="DEUDA_SALON", text="DEUDA_SALON", color="DEUDA_SALON", color_continuous_scale="Reds", title="Deuda Acumulada por Salón (S/)")
-        fig_deuda.update_traces(texttemplate='S/ %{text:,.2f}', textposition='outside')
-        st.plotly_chart(fig_deuda, use_container_width=True)
+        st.subheader("📋 Cuadro General de Morosidad y Rendimiento")
+        st.dataframe(df_mor_resumen[['FECHA', 'CICLO', 'TUTO', 'MAT', 'PAG', 'SUS', 'DES', 'CUM', 'NOT']], use_container_width=True, hide_index=True)
         st.markdown('</div>', unsafe_allow_html=True)
+        
+        col_graf_moro, col_ia_moro = st.columns([1, 1])
+        
+        with col_graf_moro:
+            st.markdown('<div class="web-card" style="height: 100%;">', unsafe_allow_html=True)
+            st.subheader("💸 Deuda Acumulada (S/)")
+            df_mor_resumen['DEUDA_SALON'] = df_mor_resumen['SUS'] * 510
+            fig_deuda = px.bar(df_mor_resumen, x="TUTO", y="DEUDA_SALON", text="DEUDA_SALON", color="DEUDA_SALON", color_continuous_scale="Reds")
+            fig_deuda.update_traces(texttemplate='S/ %{text:,.2f}', textposition='outside')
+            st.plotly_chart(fig_deuda, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+        with col_ia_moro:
+            # =========================================================
+            # NUEVO: MAPEO DE IA INTERACTIVO POR TUTOR
+            # =========================================================
+            st.markdown('<div class="web-card" style="height: 100%;">', unsafe_allow_html=True)
+            st.subheader("🤖 Mapeo de IA por Tutor")
+            tutor_moro_ia = st.selectbox("Selecciona un tutor para evaluar su cartera:", df_mor_resumen["TUTO"].unique(), key="ia_moro")
+            
+            datos_moro_tutor = df_mor_resumen[df_mor_resumen["TUTO"] == tutor_moro_ia].iloc[0]
+            suspendidos = int(datos_moro_tutor['SUS'])
+            deuda_tutor = suspendidos * 510
+            cumplimiento = datos_moro_tutor['CUM']
+            nota_tutor = datos_moro_tutor['NOT']
+            desercion = datos_moro_tutor['DES']
+            
+            if suspendidos == 0:
+                mensaje_ia = f"¡Gestión Impecable! El aula no registra morosidad. Se ha logrado un cumplimiento del <b>{cumplimiento}</b> con una nota de <b>{nota_tutor}</b>. Mantener las estrategias actuales de seguimiento constante."
+                color_ia = "#4CAF50" # Verde
+                bg_ia = "#e8f5e9"
+            elif suspendidos <= 5:
+                mensaje_ia = f"Gestión Estable pero con riesgo leve. Hay <b>{suspendidos} alumnos suspendidos</b>, generando una deuda proyectada de <b>S/ {deuda_tutor:,.2f}</b>. El cumplimiento es de <b>{cumplimiento}</b>. Se recomienda un contacto preventivo rápido vía WhatsApp para evitar que la deuda crezca y afecte la nota del próximo corte."
+                color_ia = "#FF9800" # Naranja
+                bg_ia = "#fff3e0"
+            else:
+                mensaje_ia = f"¡Alerta de Morosidad! El salón presenta <b>{suspendidos} alumnos suspendidos</b>, acumulando una deuda crítica de <b>S/ {deuda_tutor:,.2f}</b>. El índice de deserción es preocupante (<b>{desercion}</b>). Se requiere intervención urgente de cobranzas y apoyo psicológico para retener a los estudiantes antes de perderlos definitivamente."
+                color_ia = "#F44336" # Rojo
+                bg_ia = "#ffebee"
+                
+            st.markdown(f"""
+            <div class="mascot-container animate-up" style="background: {bg_ia}; border-left-color: {color_ia}; margin-top: 15px; padding: 20px;">
+                <div class="mascot-avatar" style="background: white; font-size: 2.5rem;">🤖</div>
+                <div class="mascot-speech-bubble">
+                    <h4 style='color: {color_ia}; font-weight: 800; margin: 0 0 10px 0;'>Diagnóstico Financiero</h4>
+                    <p style="margin:0; color:#333; font-size:1rem;">{mensaje_ia}</p>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.divider()
+            c1, c2 = st.columns(2)
+            c1.metric("Alumnos Suspendidos", suspendidos)
+            c2.metric("Deuda Proyectada", f"S/ {deuda_tutor:,.2f}")
+            
+            st.markdown('</div>', unsafe_allow_html=True)
         
     with tab_mor2:
         st.markdown('<div class="web-card">', unsafe_allow_html=True)
@@ -441,7 +492,7 @@ elif menu == "⚠️ Morosidad":
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
-# PÁGINA 4: ANÁLISIS ACADÉMICO (IA WITH MASCOT)
+# PÁGINA 4: ANÁLISIS ACADÉMICO (IA)
 # ==========================================
 elif menu == "🤖 Análisis Académico":
     st.markdown('<p class="title-comas" style="font-size: 2.5rem;">Inteligencia Académica</p>', unsafe_allow_html=True)
@@ -572,4 +623,4 @@ elif menu == "📈 Evaluación Bimensual":
             <p><b>3. Áreas de Oportunidad:</b> Se recomienda implementar un plan de acción inmediato para mejorar la <b>Asistencia a Study Time (S.T.)</b> y la ejecución de los <b>EPPFF</b>, ya que presentan los indicadores más bajos del periodo.</p>
             <p>🚀 <i>Directiva: Felicitar al top 5 en la próxima reunión de equipo y programar clínicas de capacitación para los indicadores de Study Time.</i></p>
         </div>
-        """, unsafe_allow_html=True) 
+        """, unsafe_allow_html=True)  
