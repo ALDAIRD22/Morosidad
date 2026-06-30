@@ -140,7 +140,7 @@ st.sidebar.title("Navegación Web")
 menu = st.sidebar.radio("", ("🏠 Inicio", "🏆 Olimpiadas", "⚠️ Morosidad", "🤖 Análisis Académico", "📈 Evaluación Bimensual"))
 
 # ==========================================
-# PÁGINA 1: INICIO (CARRUSEL CONFIGURADO)
+# PÁGINA 1: INICIO (CARRUSEL EN VIVO)
 # ==========================================
 if menu == "🏠 Inicio":
     st.balloons()
@@ -149,18 +149,16 @@ if menu == "🏠 Inicio":
     st.markdown('<div class="web-card">', unsafe_allow_html=True)
     st.subheader("📸 Galería Fotográfica de la Sede")
     
-    # ENLACES DIRECTOS EXTRAÍDOS DE TUS LINKS DE GOOGLE DRIVE
+    # NOTA: Si siguen sin cargar, usa links directos de ImgBB (.jpg) aquí:
     LINK_FOTO_1 = "https://docs.google.com/uc?export=view&id=1Y9n4xlDrUS1yf5wlExwqUpsUuMrECmtR"
     LINK_FOTO_2 = "https://docs.google.com/uc?export=view&id=1xx_WqMIvabKhGEzMqyBtBOUYwuOD0Yyj"
     
-    # Renderizado del componente HTML animado en Streamlit
     st.markdown(f"""
         <div class="slider-wrapper">
             <img class="slide-img" src="{LINK_FOTO_1}">
             <img class="slide-img" src="{LINK_FOTO_2}">
         </div>
     """, unsafe_allow_html=True)
-    
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
@@ -173,11 +171,19 @@ elif menu == "🏆 Olimpiadas":
     
     with tab1:
         st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
-        st.subheader("💰 Resumen Global de la Sede")
-        col_tot1, col_tot2, col_tot3 = st.columns(3)
-        col_tot1.metric("Total Recaudado", f"S/ {df_olim['Recaudado'].sum():,.2f}")
-        col_tot2.metric("Total Yape", f"S/ {df_olim['YAPE'].sum():,.2f}")
-        col_tot3.metric("Total Efectivo", f"S/ {df_olim['EFECTIVO'].sum():,.2f}")
+        st.subheader("💰 Resumen Global e Ingresos de la Sede")
+        
+        # CÁLCULOS DE METRICAS SOLICITADAS
+        total_recaudado = df_olim['Recaudado'].sum()
+        total_yape = df_olim['YAPE'].sum()
+        total_efectivo = df_olim['EFECTIVO'].sum()
+        total_falta = df_olim['Falta'].sum()
+        
+        col_tot1, col_tot2, col_tot3, col_tot4 = st.columns(4)
+        col_tot1.metric("Total Recaudado", f"S/ {total_recaudado:,.2f}")
+        col_tot2.metric("Total Yape", f"S/ {total_yape:,.2f}")
+        col_tot3.metric("Total Efectivo", f"S/ {total_efectivo:,.2f}")
+        col_tot4.metric("Dinero que Falta (Meta)", f"S/ {total_falta:,.2f}", delta="- Pendiente", delta_color="inverse")
         
         st.divider()
         st.subheader("🥇 Ranking de Tutores (Avance %)")
@@ -202,7 +208,6 @@ elif menu == "🏆 Olimpiadas":
         col4.metric("Falta Recaudar", f"S/ {datos_tutor['Falta']:,.2f}")
         
         st.divider()
-        
         col_graf1, col_graf2 = st.columns(2)
         
         with col_graf1:
@@ -225,7 +230,6 @@ elif menu == "🏆 Olimpiadas":
         with col_graf2:
             fig_pie = px.pie(values=[datos_tutor["YAPE"], datos_tutor["EFECTIVO"]], names=["Yape", "Efectivo"], hole=0.5, title="Distribución de Pagos")
             st.plotly_chart(fig_pie, use_container_width=True)
-            
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
@@ -289,7 +293,6 @@ elif menu == "⚠️ Morosidad":
                 "Acción": st.column_config.LinkColumn("Enviar WhatsApp 💬", display_text="Cobrar por WS")
             }
         )
-        st.info("💡 Haz clic en 'Cobrar por WS' para abrir el chat directamente con el número que pusiste en tu Excel.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with tab_mor3:
@@ -353,7 +356,7 @@ elif menu == "🤖 Análisis Académico":
 
     st.divider()
     
-    st.subheader(f"📈 Evolución de Notas (Pasa el cursor sobre los puntos)")
+    st.subheader(f"📈 Evolución de Notas")
     fig_notas = px.line(datos_ia, x="EXAMEN", y="NOTA", markers=True, hover_data=["ASISTENCIA", "FALTA", "VARIACION", "SICA", "C+D", "CXM"])
     fig_notas.update_traces(marker=dict(size=10, color='#FF4B2B'), line=dict(width=3))
     st.plotly_chart(fig_notas, use_container_width=True)
@@ -426,4 +429,4 @@ elif menu == "📈 Evaluación Bimensual":
             <p><b>3. Áreas de Oportunidad:</b> Se recomienda implementar un plan de acción inmediato para mejorar la <b>Asistencia a Study Time (S.T.)</b> y la ejecución de los <b>EPPFF</b>, ya que presentan los indicadores más bajos del periodo.</p>
             <p>🚀 <i>Directiva: Felicitar al top 5 en la próxima reunión de equipo y programar clínicas de capacitación para los indicadores de Study Time.</i></p>
         </div>
-        """, unsafe_allow_html=True) 
+        """, unsafe_allow_html=True)  
