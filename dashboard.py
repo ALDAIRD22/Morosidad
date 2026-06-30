@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -158,7 +158,7 @@ st.sidebar.title("Navegación Web")
 menu = st.sidebar.radio("", ("🏠 Inicio", "🏆 Olimpiadas", "⚠️ Morosidad", "🤖 Análisis Académico", "📈 Evaluación Bimensual"))
 
 # ==========================================
-# PÁGINA 1: INICIO
+# PÁGINA 1: INICIO 
 # ==========================================
 if menu == "🏠 Inicio":
     st.balloons()
@@ -250,11 +250,13 @@ elif menu == "🏆 Olimpiadas":
 
     with tab3:
         st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
-        st.subheader("👕 Control de Tallas por Tutor (Lista Completa)")
+        st.subheader("👕 Control de Tallas por Tutor (Lista Única)")
         
-        # Unir asegurando inclusión de TODOS los tutores de la lista principal
-        df_olim_sub = df_olim[['Tutor', 'Pagantes']].copy()
-        df_control = pd.merge(df_olim_sub, df_tallas, on='Tutor', how='left').fillna(0)
+        # CORRECCIÓN DE DUPLICADOS: drop_duplicates asegura una línea por tutor único
+        df_olim_sub = df_olim[['Tutor', 'Pagantes']].copy().drop_duplicates(subset=['Tutor'])
+        df_tallas_clean = df_tallas.copy().drop_duplicates(subset=['Tutor'])
+        
+        df_control = pd.merge(df_olim_sub, df_tallas_clean, on='Tutor', how='left').fillna(0)
         
         for col in ['Pagantes', 'S', 'M', 'L', 'XL', 'Total Polos']:
             df_control[col] = df_control[col].astype(int)
@@ -270,13 +272,13 @@ elif menu == "🏆 Olimpiadas":
         if balance_sede == 0:
             col_t3.metric("Estado General de Sede", "✅ Todo Cuadra Perfecto")
         elif balance_sede > 0:
-            col_t3.metric("Estado General de Sede", f"🔴 Sobran {int(balance_sede)} polos")
+            col_t3.metric("Estado General de Sede", f"🔴 Se excede por {int(balance_sede)} polos")
         else:
-            col_t3.metric("Estado General de Sede", f"🟡 Faltan {int(abs(balance_sede))} polos", delta_color="inverse")
+            col_t3.metric("Estado General de Sede", f"🟡 Le faltan {int(abs(balance_sede))} polos", delta_color="inverse")
             
         st.divider()
         
-        # Inteligencia Artificial Integrada en el Código
+        # Inteligencia Artificial Integrada
         st.markdown(f"""
         <div class="ia-box">
             <h4>🧠 Auditoría Logística de Tallas por IA</h4>
@@ -291,14 +293,15 @@ elif menu == "🏆 Olimpiadas":
         st.plotly_chart(fig_tallas_comp, use_container_width=True)
         
         st.subheader("📋 Resumen de Control")
+        # CORRECCIÓN DE MENSAJE SOLICITADO: "le falta" o "se excede"
         def clean_status(row):
             diff = row['Total Polos'] - row['Pagantes']
             if diff == 0: return "✅ Cuadra Perfecto"
-            elif diff > 0: return f"❌ Sobran {int(diff)} polos"
-            else: return f"⚠️ Faltan {int(abs(diff))} polos"
+            elif diff > 0: return f"❌ Se excede por {int(diff)} polos (Sobran)"
+            else: return f"⚠️ Le falta {int(abs(diff))} polos por registrar"
             
-        df_control['Estado / Alerta'] = df_control.apply(clean_status, axis=1)
-        st.dataframe(df_control[['Tutor', 'Total Polos', 'Pagantes', 'Estado / Alerta']], use_container_width=True, hide_index=True)
+        df_control['Observación'] = df_control.apply(clean_status, axis=1)
+        st.dataframe(df_control[['Tutor', 'Total Polos', 'Pagantes', 'Observación']], use_container_width=True, hide_index=True)
         
         with st.expander("🔍 Ver desglose detallado por tallas (S, M, L, XL)"):
             st.dataframe(df_control[['Tutor', 'S', 'M', 'L', 'XL', 'Total Polos']], use_container_width=True, hide_index=True)
@@ -499,7 +502,7 @@ elif menu == "📈 Evaluación Bimensual":
             <h3 style='color: #4CAF50; font-weight: 800; margin-bottom: 10px;'>🧠 Reporte Estratégico de Gestión</h3>
             <p><b>1. Tendencia General:</b> El equipo mantiene un estándar sobresaliente con un promedio global de <b>{promedio_global:.2f}</b>. Esto refleja un compromiso sólido con los estándares de calidad de la sede.</p>
             <p><b>2. Pilares de Éxito:</b> Se identifican fortalezas clave en el <i>Cumplimiento de Meta</i> y la <i>Satisfacción del Alumno (Encuestas)</i>, demostrando un excelente clima en las aulas.</p>
-            <p><b>3. Areas de Oportunidad:</b> Se recomienda implementar un plan de acción inmediato para mejorar la <b>Asistencia a Study Time (S.T.)</b> y la ejecución de los <b>EPPFF</b>, ya que presentan los indicadores más bajos del periodo.</p>
+            <p><b>3. Áreas de Oportunidad:</b> Se recomienda implementar un plan de acción inmediato para mejorar la <b>Asistencia a Study Time (S.T.)</b> y la ejecución de los <b>EPPFF</b>, ya que presentan los indicadores más bajos del periodo.</p>
             <p>🚀 <i>Directiva: Felicitar al top 5 en la próxima reunión de equipo y programar clínicas de capacitación para los indicadores de Study Time.</i></p>
         </div>
-        """, unsafe_allow_html=True)  
+        """, unsafe_allow_html=True)   
