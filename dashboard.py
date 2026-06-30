@@ -140,7 +140,7 @@ st.sidebar.title("Navegación Web")
 menu = st.sidebar.radio("", ("🏠 Inicio", "🏆 Olimpiadas", "⚠️ Morosidad", "🤖 Análisis Académico", "📈 Evaluación Bimensual"))
 
 # ==========================================
-# PÁGINA 1: INICIO (CARRUSEL EN VIVO)
+# PÁGINA 1: INICIO (CARRUSEL EN VIVO CORREGIDO)
 # ==========================================
 if menu == "🏠 Inicio":
     st.balloons()
@@ -149,15 +149,15 @@ if menu == "🏠 Inicio":
     st.markdown('<div class="web-card">', unsafe_allow_html=True)
     st.subheader("📸 Galería Fotográfica de la Sede")
     
-    # ENLACES DIRECTOS PROCESADOS DESDE TU GOOGLE DRIVE
-    LINK_FOTO_1 = "https://drive.google.com/uc?id=1xx_WqMIvabKhGEzMqyBtBOUYwuOD0Yyj"
-    LINK_FOTO_2 = "https://drive.google.com/uc?id=1Y9n4xlDrUS1yf5wlExwqUpsUuMrECmtR"
+    # ENLACES DIRECTOS VERIFICADOS USANDO SERVIDOR DE GOOGLE DOCS VIEW
+    LINK_FOTO_1 = "https://docs.google.com/uc?export=view&id=1xx_WqMIvabKhGEzMqyBtBOUYwuOD0Yyj"
+    LINK_FOTO_2 = "https://docs.google.com/uc?export=view&id=1Y9n4xlDrUS1yf5wlExwqUpsUuMrECmtR"
     
-    # Renderizar el contenedor web con la transición crossfade automática
+    # Renderizar el carrusel animado
     st.markdown(f"""
         <div class="slider-wrapper">
-            <img class="slide-img" src="{LINK_FOTO_1}" alt="Equipo Comas Foto 1">
-            <img class="slide-img" src="{LINK_FOTO_2}" alt="Equipo Comas Foto 2">
+            <img class="slide-img" src="{LINK_FOTO_1}">
+            <img class="slide-img" src="{LINK_FOTO_2}">
         </div>
     """, unsafe_allow_html=True)
     
