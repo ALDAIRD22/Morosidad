@@ -192,8 +192,8 @@ if menu == "🏠 Inicio":
     st.markdown('<div class="web-card">', unsafe_allow_html=True)
     st.subheader("📸 Galería Fotográfica de la Sede")
     
-    LINK_FOTO_1 = "https://lh3.googleusercontent.com/d/1Y9n4xlDrUS1yf5wlExwqUpsUuMrECmtR"
-    LINK_FOTO_2 = "https://lh3.googleusercontent.com/d/1xx_WqMIvabKhGEzMqyBtBOUYwuOD0Yyj"
+    LINK_FOTO_1 = "https://lh3.googleusercontent.com/d/1xx_WqMIvabKhGEzMqyBtBOUYwuOD0Yyj"
+    LINK_FOTO_2 = "https://lh3.googleusercontent.com/d/1Y9n4xlDrUS1yf5wlExwqUpsUuMrECmtR"
     
     st.markdown(f"""
         <div class="slider-wrapper">
