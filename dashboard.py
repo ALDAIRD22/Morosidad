@@ -87,7 +87,7 @@ def load_data():
             if col in df_olim.columns:
                 df_olim[col] = pd.to_numeric(df_olim[col].astype(str).str.replace(r'[S/,\s%]', '', regex=True).str.replace('-', '0'), errors='coerce').fillna(0)
 
-        # 1.5 TALLAS DE OLIMPIADAS (Lee desde la fila 12)
+        # 1.5 TALLAS DE OLIMPIADAS (Fila 12)
         df_tallas = pd.read_csv(url_olim, skiprows=11, usecols=range(0, 5))
         df_tallas.columns = ["Tutor", "S", "M", "L", "XL"]
         df_tallas = df_tallas.dropna(subset=["Tutor"])
@@ -155,7 +155,7 @@ st.sidebar.title("Navegación Web")
 menu = st.sidebar.radio("", ("🏠 Inicio", "🏆 Olimpiadas", "⚠️ Morosidad", "🤖 Análisis Académico", "📈 Evaluación Bimensual"))
 
 # ==========================================
-# PÁGINA 1: INICIO (CARRUSEL CON LINKS BYPASS GOOGLE)
+# PÁGINA 1: INICIO (CARRUSEL EXCLUSIVO)
 # ==========================================
 if menu == "🏠 Inicio":
     st.balloons()
@@ -164,14 +164,13 @@ if menu == "🏠 Inicio":
     st.markdown('<div class="web-card">', unsafe_allow_html=True)
     st.subheader("📸 Galería Fotográfica de la Sede")
     
-    # NUEVO MÉTODO INFALIBLE PARA SALTAR EL BLOQUEO DE GOOGLE DRIVE (lh3.googleusercontent.com)
     LINK_FOTO_1 = "https://lh3.googleusercontent.com/d/1Y9n4xlDrUS1yf5wlExwqUpsUuMrECmtR"
     LINK_FOTO_2 = "https://lh3.googleusercontent.com/d/1xx_WqMIvabKhGEzMqyBtBOUYwuOD0Yyj"
     
     st.markdown(f"""
         <div class="slider-wrapper">
-            <img class="slide-img" src="{LINK_FOTO_1}" alt="Sede Comas 1" onerror="this.style.display='none'">
-            <img class="slide-img" src="{LINK_FOTO_2}" alt="Sede Comas 2" onerror="this.style.display='none'">
+            <img class="slide-img" src="{LINK_FOTO_1}">
+            <img class="slide-img" src="{LINK_FOTO_2}">
         </div>
     """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
@@ -248,29 +247,56 @@ elif menu == "🏆 Olimpiadas":
 
     with tab3:
         st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
-        st.subheader("👕 Control de Tallas vs Pagantes Reales")
+        st.subheader("👕 Control Simplificado de Polos")
         
-        # Cruzar datos de tallas con los pagantes reales
+        # Cruzar datos
         df_control = pd.merge(df_tallas, df_olim[['Tutor', 'Pagantes']], on='Tutor', how='left').fillna(0)
         df_control['Pagantes'] = df_control['Pagantes'].astype(int)
-        df_control['Diferencia'] = df_control['Total Polos'] - df_control['Pagantes']
         
-        # Función para pintar alertas
-        def formato_alerta(val):
-            if val > 0: return f"🔴 Sobran {int(val)} polos"
-            elif val < 0: return f"🟡 Faltan {int(abs(val))} polos"
-            else: return "✅ Cuadra Exacto"
+        total_polos_sede = df_control['Total Polos'].sum()
+        total_pagantes_sede = df_control['Pagantes'].sum()
+        balance_sede = total_polos_sede - total_pagantes_sede
+        
+        # 1. TARJETAS DE ALERTA RÁPIDA (SEMAFORO)
+        col_t1, col_t2, col_t3 = st.columns(3)
+        col_t1.metric("Total Polos Pedidos", int(total_polos_sede))
+        col_t2.metric("Total Alumnos Pagantes", int(total_pagantes_sede))
+        
+        if balance_sede == 0:
+            col_t3.metric("Estado General de Sede", "✅ Todo Cuadra Perfecto")
+        elif balance_sede > 0:
+            col_t3.metric("Estado General de Sede", f"🔴 Sobran {int(balance_sede)} polos", "Exceso")
+        else:
+            col_t3.metric("Estado General de Sede", f"🟡 Faltan {int(abs(balance_sede))} polos", "Faltante", delta_color="inverse")
             
-        df_control['Estado / Alerta'] = df_control['Diferencia'].apply(formato_alerta)
+        st.divider()
         
-        # Mostrar tabla interactiva
-        st.dataframe(
-            df_control[['Tutor', 'S', 'M', 'L', 'XL', 'Total Polos', 'Pagantes', 'Estado / Alerta']], 
-            use_container_width=True, 
-            hide_index=True
-        )
+        # 2. GRÁFICO ULTRA SENCILLO (Si las barras están iguales, cuadra perfecto)
+        st.subheader("📊 Comparación Visual por Salón (¿Las barras están iguales?)")
+        df_chart_tallas = df_control.melt(id_vars=['Tutor'], value_vars=['Total Polos', 'Pagantes'], var_name='Concepto', value_name='Cantidad')
+        df_chart_tallas['Concepto'] = df_chart_tallas['Concepto'].replace({'Total Polos': 'Polos Solicitados', 'Pagantes': 'Alumnos Pagantes'})
         
-        st.info("💡 La columna 'Estado / Alerta' resta el Total de Polos pedidos menos la cantidad de Pagantes reales para detectar errores.")
+        fig_tallas_comp = px.bar(df_chart_tallas, x='Tutor', y='Cantidad', color='Concepto', barmode='group', color_discrete_sequence=["#1E3A8A", "#4CAF50"])
+        fig_tallas_comp.update_layout(height=400)
+        st.plotly_chart(fig_tallas_comp, use_container_width=True)
+        
+        st.divider()
+        
+        # 3. TABLA SIMPLIFICADA
+        st.subheader("📋 Resumen de Control")
+        def clean_status(row):
+            diff = row['Total Polos'] - row['Pagantes']
+            if diff == 0: return "✅ Cuadra Perfecto"
+            elif diff > 0: return f"❌ Sobran {int(diff)} polos"
+            else: return f"⚠️ Faltan {int(abs(diff))} polos"
+            
+        df_control['Estado / Alerta'] = df_control.apply(clean_status, axis=1)
+        st.dataframe(df_control[['Tutor', 'Total Polos', 'Pagantes', 'Estado / Alerta']], use_container_width=True, hide_index=True)
+        
+        # 4. DESGROSE OCULTO (Solo se abre si haces clic)
+        with st.expander("🔍 Ver desglose detallado por tallas (S, M, L, XL)"):
+            st.dataframe(df_control[['Tutor', 'S', 'M', 'L', 'XL', 'Total Polos']], use_container_width=True, hide_index=True)
+            
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
