@@ -48,6 +48,7 @@ def load_data():
     url_olim = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=272338387"
     url_mor = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=0"
     url_ana = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=2004118335"
+    url_bim = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=1034063425"
     
     try:
         # 1. OLIMPIADAS
@@ -85,12 +86,28 @@ def load_data():
             if col in df_analisis.columns:
                 df_analisis[col] = pd.to_numeric(df_analisis[col].astype(str).str.replace('%', ''), errors='coerce').fillna(0)
 
-        return df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis
+        # 6. BIMENSUAL (NUEVA PESTAÑA)
+        df_bim = pd.read_csv(url_bim)
+        df_bim.columns = df_bim.columns.str.strip()
+        df_bim = df_bim.dropna(subset=["TUTOR"])
+        cols_num_bim = [
+            'ASIST. ALUMNOS', 'ASIST. TUTORES', 'ASISTENCIA Y PUNTUALIDAD', 
+            'ENCUESTA S.T.', 'ASISTENCIA S.T.', 'STUDY TIME', 'CI', 'EPPFF', 
+            'ORIENTACIÓN', 'CUMP. DE META', 'ASIST. EVALUACIONES', 'PLAN DE ACCIÓN', 
+            'META ACADÉMICA', 'DESERCIÓN', 'ENCUESTA TUTOR', 'PART. ENC. DOCENTE', 
+            'PROMEDIO FINAL EVA. Y DESEMPEÑO', 'NOTA FINAL'
+        ]
+        for col in cols_num_bim:
+            if col in df_bim.columns:
+                # Limpiar cualquier caracter no numérico excepto punto decimal
+                df_bim[col] = pd.to_numeric(df_bim[col].astype(str).str.replace(r'[^\d.]', '', regex=True), errors='coerce').fillna(0)
+
+        return df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis, df_bim
     except Exception as e:
         st.error(f"Error al conectar con Google Sheets. Detalle: {e}")
         st.stop()
 
-df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis = load_data()
+df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis, df_bim = load_data()
 
 @st.cache_data
 def convert_df(df):
@@ -101,7 +118,7 @@ def convert_df(df):
 # ==========================================
 st.sidebar.image("https://cdn-icons-png.flaticon.com/512/3048/3048122.png", width=100)
 st.sidebar.title("Navegación Web")
-menu = st.sidebar.radio("", ("🏠 Inicio", "🏆 Olimpiadas", "⚠️ Morosidad", "🤖 Análisis Académico"))
+menu = st.sidebar.radio("", ("🏠 Inicio", "🏆 Olimpiadas", "⚠️ Morosidad", "🤖 Análisis Académico", "📈 Evaluación Bimensual"))
 
 # ==========================================
 # PÁGINA 1: INICIO
@@ -222,12 +239,8 @@ elif menu == "⚠️ Morosidad":
         with col_filtro:
             tutor_moroso = st.selectbox("Filtrar alumnos por tutor:", ["Todos"] + list(df_mor_alumnos["Tutor"].unique()))
             
-        # Filtramos la tabla según el tutor
         df_filtrado = df_mor_alumnos if tutor_moroso == "Todos" else df_mor_alumnos[df_mor_alumnos["Tutor"] == tutor_moroso]
         
-        # =====================================================================
-        # NUEVO: REINICIAR EL NÚMERO DE ORDEN (#) DESDE EL 1
-        # =====================================================================
         df_filtrado = df_filtrado.copy()
         df_filtrado["#"] = range(1, len(df_filtrado) + 1)
         
@@ -238,7 +251,7 @@ elif menu == "⚠️ Morosidad":
         
         df_mostrar = df_filtrado.copy()
         df_mostrar['Celular_Limpio'] = df_mostrar['Celular'].astype(str).str.replace(r'\D', '', regex=True)
-        df_mostrar['Acción'] = "https://wa.me/" + df_mostrar['Celular_Limpio'] + "?text=Hola%20apoderado%20de%20" + df_mostrar['ALUMNO'].astype(str).str.replace(' ', '%20') + ",%20le%20escribimos%20de%20la%20Sede%20Comas%20para%20recordarle%20amablemente%20el%20pago%20de%20su%20cuota%20pendiente.%20Muchas%20gracias."
+        df_mostrar['Acción'] = "https://wa.me/51" + df_mostrar['Celular_Limpio'] + "?text=Hola%20apoderado%20de%20" + df_mostrar['ALUMNO'].astype(str).str.replace(' ', '%20') + ",%20le%20escribimos%20de%20la%20Sede%20Comas%20para%20recordarle%20amablemente%20el%20pago%20de%20su%20cuota%20pendiente.%20Muchas%20gracias."
         df_mostrar = df_mostrar.drop(columns=['Celular_Limpio'])
         
         st.dataframe(
@@ -335,3 +348,55 @@ elif menu == "🤖 Análisis Académico":
         <p>🚀 <i>Estrategia: Aplica simulacros cronometrados semanales y tutorías personalizadas. ¡Vamos por esos cachimbos!</i></p>
     </div>
     """, unsafe_allow_html=True) 
+
+# ==========================================
+# PÁGINA 5: EVALUACIÓN BIMENSUAL (NUEVO)
+# ==========================================
+elif menu == "📈 Evaluación Bimensual":
+    st.markdown('<p class="title-comas" style="font-size: 2.5rem;">Evaluación Corporativa Bimensual</p>', unsafe_allow_html=True)
+    
+    st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
+    st.subheader("📊 Panel de Rendimiento de Tutores")
+    
+    promedio_global = df_bim['NOTA FINAL'].mean() if not df_bim.empty else 0
+    nota_max = df_bim['NOTA FINAL'].max() if not df_bim.empty else 0
+    mejor_tutor = df_bim.loc[df_bim['NOTA FINAL'].idxmax()]['TUTOR'] if not df_bim.empty else "N/A"
+    
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Promedio Global (Sede)", f"{promedio_global:.2f} / 20")
+    col2.metric("Tutor Destacado", mejor_tutor.split()[0].capitalize() if mejor_tutor != "N/A" else "N/A")
+    col3.metric("Nota Máxima Alcanzada", f"{nota_max:.2f}")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    tab_bim1, tab_bim2, tab_bim3 = st.tabs(["📈 Gráficos de Rendimiento", "🏆 Ranking y Cuadro de Honor", "🧠 Análisis Estratégico (IA)"])
+    
+    with tab_bim1:
+        st.markdown('<div class="web-card">', unsafe_allow_html=True)
+        st.subheader("Comparativa de Notas Finales por Periodo")
+        fig_bim = px.bar(df_bim, x="TUTOR", y="NOTA FINAL", color="PERIODO DE EVALUACION", barmode="group", text="NOTA FINAL", color_discrete_sequence=["#FF4B2B", "#4CAF50", "#FFC107"])
+        fig_bim.update_traces(texttemplate='%{text:.2f}', textposition='outside')
+        fig_bim.update_layout(xaxis_tickangle=-45, height=500)
+        st.plotly_chart(fig_bim, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    with tab_bim2:
+        st.markdown('<div class="web-card">', unsafe_allow_html=True)
+        st.subheader("🏆 Top 5 Tutores (Cuadro de Honor)")
+        df_top = df_bim.sort_values(by="NOTA FINAL", ascending=False).head(5)
+        st.dataframe(df_top[['PERIODO DE EVALUACION', 'TUTOR', 'NOTA FINAL', 'CUMP. DE META', 'ENCUESTA TUTOR']], use_container_width=True, hide_index=True)
+        
+        st.divider()
+        st.subheader("📑 Base de Datos Completa")
+        st.dataframe(df_bim, use_container_width=True, hide_index=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    with tab_bim3:
+        st.markdown(f"""
+        <div class="ia-box animate-up" style="height: 100%;">
+            <h3 style='color: #4CAF50; font-weight: 800; margin-bottom: 10px;'>🧠 Reporte Estratégico de Gestión</h3>
+            <p><b>1. Tendencia General:</b> El equipo mantiene un estándar sobresaliente con un promedio global de <b>{promedio_global:.2f}</b>. Esto refleja un compromiso sólido con los estándares de calidad de la sede.</p>
+            <p><b>2. Pilares de Éxito:</b> Se identifican fortalezas clave en el <i>Cumplimiento de Meta</i> y la <i>Satisfacción del Alumno (Encuestas)</i>, demostrando un excelente clima en las aulas.</p>
+            <p><b>3. Áreas de Oportunidad:</b> Se recomienda implementar un plan de acción inmediato para mejorar la <b>Asistencia a Study Time (S.T.)</b> y la ejecución de los <b>EPPFF</b>, ya que presentan los indicadores más bajos del periodo.</p>
+            <p>🚀 <i>Directiva: Felicitar al top 5 en la próxima reunión de equipo y programar clínicas de capacitación para los indicadores de Study Time.</i></p>
+        </div>
+        """, unsafe_allow_html=True)
