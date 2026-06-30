@@ -31,62 +31,18 @@ st.markdown("""
     
     .ia-box { background: linear-gradient(135deg, #f6f8fd 0%, #f1f5f9 100%); border-radius: 15px; padding: 25px; border-left: 6px solid #4CAF50; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
     
-    /* DISEÑO DE MASCOTA PERSONAJE INTERACTIVO */
-    .mascot-container {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.05);
-        margin-top: 25px;
-        border-left: 6px solid #FF4B2B;
-    }
-    .mascot-avatar {
-        font-size: 3rem;
-        background: #f1f5f9;
-        padding: 12px;
-        border-radius: 50%;
-        box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .mascot-speech-bubble {
-        flex: 1;
-    }
+    .mascot-container { display: flex; align-items: center; gap: 20px; background: white; border-radius: 15px; padding: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.05); margin-top: 25px; border-left: 6px solid #FF4B2B; }
+    .mascot-avatar { font-size: 3rem; background: #f1f5f9; padding: 12px; border-radius: 50%; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; }
+    .mascot-speech-bubble { flex: 1; }
 
-    /* Estilo para las pestañas (Tabs) */
     .stTabs [data-baseweb="tab-list"] { gap: 24px; }
     .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: transparent; border-radius: 4px 4px 0px 0px; gap: 1px; padding-top: 10px; padding-bottom: 10px; font-weight: 600; font-size: 1.1rem; }
     
-    /* ANIMACIÓN DE TRANSICIÓN (SLIDESHOW) */
-    .slider-wrapper {
-        position: relative;
-        width: 100%;
-        height: 550px;
-        border-radius: 15px;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-        background-color: #f0f2f6;
-    }
-    .slide-img {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        opacity: 0;
-        animation: slide-anim 10s infinite;
-    }
+    .slider-wrapper { position: relative; width: 100%; height: 550px; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.15); background-color: #f0f2f6; }
+    .slide-img { position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0; animation: slide-anim 10s infinite; }
     .slide-img:nth-child(1) { animation-delay: 0s; }
     .slide-img:nth-child(2) { animation-delay: 5s; }
-    
-    @keyframes slide-anim {
-        0%, 40% { opacity: 1; }
-        50%, 90% { opacity: 0; }
-        100% { opacity: 1; }
-    }
+    @keyframes slide-anim { 0%, 40% { opacity: 1; } 50%, 90% { opacity: 0; } 100% { opacity: 1; } }
     </style>
 """, unsafe_allow_html=True)
 
@@ -108,12 +64,11 @@ def load_data():
         df_olim = df_olim.dropna(subset=["Tutor"])
         df_olim = df_olim[~df_olim['Tutor'].astype(str).str.upper().str.contains('TOTAL')]
         df_olim['Tutor'] = df_olim['Tutor'].astype(str).str.replace('\n', ' ').str.strip()
-        
         for col in ['Matriculados', 'Meta', 'Pagantes', 'EFECTIVO', 'YAPE', 'Recaudado', 'Falta', 'Avance %']:
             if col in df_olim.columns:
                 df_olim[col] = pd.to_numeric(df_olim[col].astype(str).str.replace(r'[S/,\s%]', '', regex=True).str.replace('-', '0'), errors='coerce').fillna(0)
 
-        # 1.5 TALLAS DE OLIMPIADAS (Fila 12)
+        # 1.5 TALLAS
         df_tallas = pd.read_csv(url_olim, skiprows=11, usecols=range(0, 5))
         df_tallas.columns = ["Tutor", "S", "M", "L", "XL"]
         df_tallas = df_tallas.dropna(subset=["Tutor"])
@@ -122,11 +77,13 @@ def load_data():
             df_tallas[col] = pd.to_numeric(df_tallas[col], errors='coerce').fillna(0).astype(int)
         df_tallas["Total Polos"] = df_tallas["S"] + df_tallas["M"] + df_tallas["L"] + df_tallas["XL"]
 
-        # 2. MOROSIDAD - RESUMEN
+        # 2. MOROSIDAD - RESUMEN (CON CICLO COMBINADO)
         df_mor_resumen = pd.read_csv(url_mor, skiprows=1, usecols=range(0, 9))
         df_mor_resumen.columns = ["FECHA", "CICLO", "TUTO", "MAT", "PAG", "SUS", "DES", "CUM", "NOT"]
         df_mor_resumen = df_mor_resumen.dropna(subset=["TUTO"])
         df_mor_resumen = df_mor_resumen[~df_mor_resumen["TUTO"].astype(str).str.upper().str.contains('TOTAL')]
+        # Crear columna única para diferenciar tutores con varios ciclos
+        df_mor_resumen['TUTO_CICLO'] = df_mor_resumen['TUTO'].astype(str) + " (" + df_mor_resumen['CICLO'].astype(str) + ")"
         for col in ["MAT", "PAG", "SUS", "NOT"]:
             df_mor_resumen[col] = pd.to_numeric(df_mor_resumen[col], errors='coerce').fillna(0)
 
@@ -182,18 +139,15 @@ st.sidebar.title("Navegación Web")
 menu = st.sidebar.radio("", ("🏠 Inicio", "🏆 Olimpiadas", "⚠️ Morosidad", "🤖 Análisis Académico", "📈 Evaluación Bimensual"))
 
 # ==========================================
-# PÁGINA 1: INICIO
+# PÁGINA 1: INICIO 
 # ==========================================
 if menu == "🏠 Inicio":
     st.balloons()
     st.markdown('<div class="animate-up"><p class="title-comas">SISTEMA WEB COMAS</p><p class="subtitle">🔥 LA MEJOR SEDE - LA NÚMERO 1 🔥</p></div>', unsafe_allow_html=True)
-    
     st.markdown('<div class="web-card">', unsafe_allow_html=True)
     st.subheader("📸 Galería Fotográfica de la Sede")
-    
     LINK_FOTO_1 = "https://lh3.googleusercontent.com/d/1xx_WqMIvabKhGEzMqyBtBOUYwuOD0Yyj"
     LINK_FOTO_2 = "https://lh3.googleusercontent.com/d/1Y9n4xlDrUS1yf5wlExwqUpsUuMrECmtR"
-    
     st.markdown(f"""
         <div class="slider-wrapper">
             <img class="slide-img" src="{LINK_FOTO_1}">
@@ -207,24 +161,20 @@ if menu == "🏠 Inicio":
 # ==========================================
 elif menu == "🏆 Olimpiadas":
     st.markdown('<p class="title-comas" style="font-size: 2.5rem;">Recaudación Olimpiadas</p>', unsafe_allow_html=True)
-    
     tab1, tab2, tab3 = st.tabs(["📊 Resumen Global", "🎯 Detalle por Tutor", "👕 Control de Tallas"])
     
     with tab1:
         st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
         st.subheader("💰 Resumen Global e Ingresos de la Sede")
-        
         total_recaudado = df_olim['Recaudado'].sum()
         total_yape = df_olim['YAPE'].sum()
         total_efectivo = df_olim['EFECTIVO'].sum()
         total_falta = df_olim['Falta'].sum()
-        
         col_tot1, col_tot2, col_tot3, col_tot4 = st.columns(4)
         col_tot1.metric("Total Recaudado", f"S/ {total_recaudado:,.2f}")
         col_tot2.metric("Total Yape", f"S/ {total_yape:,.2f}")
         col_tot3.metric("Total Efectivo", f"S/ {total_efectivo:,.2f}")
         col_tot4.metric("Dinero que Falta (Meta)", f"S/ {total_falta:,.2f}", delta="- Pendiente", delta_color="inverse")
-        
         st.divider()
         st.subheader("🥇 Ranking de Tutores (Avance %)")
         df_ranking = df_olim.sort_values(by="Avance %", ascending=True)
@@ -249,6 +199,36 @@ elif menu == "🏆 Olimpiadas":
         
         st.divider()
         
+        # ==============================================================
+        # NUEVO: TALLAS INTEGRADAS DENTRO DEL DETALLE DEL TUTOR
+        # ==============================================================
+        st.subheader("📦 Inventario de Polos del Salón")
+        tallas_tutor = df_tallas[df_tallas['Tutor'] == tutor_seleccionado]
+        
+        if not tallas_tutor.empty:
+            t_data = tallas_tutor.iloc[0]
+            t_pedidos = int(t_data['Total Polos'])
+            t_pagantes = int(datos_tutor['Pagantes'])
+            t_diff = t_pedidos - t_pagantes
+            
+            c_t1, c_t2, c_t3, c_t4, c_t5, c_t6 = st.columns(6)
+            c_t1.metric("Talla S", int(t_data['S']))
+            c_t2.metric("Talla M", int(t_data['M']))
+            c_t3.metric("Talla L", int(t_data['L']))
+            c_t4.metric("Talla XL", int(t_data['XL']))
+            c_t5.metric("Total Pedidos", t_pedidos)
+            
+            if t_diff == 0:
+                c_t6.metric("Estado Logístico", "✅ Cuadra Exacto")
+            elif t_diff > 0:
+                c_t6.metric("Estado Logístico", f"🔴 Sobran {t_diff}", delta="Revisar", delta_color="inverse")
+            else:
+                c_t6.metric("Estado Logístico", f"🟡 Faltan {abs(t_diff)}", delta="Urgente", delta_color="inverse")
+        else:
+            st.warning("⚠️ Este tutor aún no ha registrado sus tallas en el sistema.")
+            
+        st.divider()
+        
         nombre_tutor_greet = tutor_seleccionado.split()[0].capitalize()
         faltantes_insc = int(datos_tutor['Meta'] - datos_tutor['Pagantes'])
         monto_pendiente = datos_tutor['Falta']
@@ -258,18 +238,18 @@ elif menu == "🏆 Olimpiadas":
             st.markdown(f"""
             <div class="ia-box animate-up" style="border-left-color: #4CAF50; background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); color: #1b5e20;">
                 <h4 style="margin:0 0 5px 0; font-weight:800; color:#1b5e20;">🏆 ¡Muy bien, {nombre_tutor_greet}! Meta Completada</h4>
-                <p style="margin:0; font-size:1rem;">Excelente gestión institucional en el aula del bloque <b>{ciclo_actual}</b>. Has logrado comprometer al <b>{avance}%</b> de tus metas, demostrando un alto nivel de organización y compromiso de tus alumnos.</p>
+                <p style="margin:0; font-size:1rem;">Excelente gestión institucional en el aula del bloque <b>{ciclo_actual}</b>. Has logrado comprometer al <b>{avance}%</b> de tus metas, demostrando un alto nivel de organización.</p>
             </div>
             """, unsafe_allow_html=True)
         else:
             if "BOZA" in tutor_seleccionado.upper() or "MARIANA" in tutor_seleccionado.upper():
-                estrategia_ia = f"Apela al <b>sentido de pertenencia e identidad de grupo</b>. Al ser un ciclo semi anual, dedica 5 minutos al inicio de la sesión para concientizar que el aula necesita la participación colectiva. Pon un reto a corto plazo con los delegados."
+                estrategia_ia = f"Apela al <b>sentido de pertenencia e identidad de grupo</b>. Al ser un ciclo semi anual, dedica 5 minutos al inicio de la sesión para concientizar que el aula necesita la participación colectiva."
             elif "ALCARRAZ" in tutor_seleccionado.upper() or "ALEXANDER" in tutor_seleccionado.upper():
-                estrategia_ia = f"Realiza un <b>mapeo y abordaje uno a uno</b> en los recesos. Con {faltantes_insc} alumnos restantes, es altamente probable que tengan dudas sobre facilidades económicas. Coordina fraccionamientos cortos con la administración de la sede."
+                estrategia_ia = f"Realiza un <b>mapeo y abordaje uno a uno</b> en los recesos. Con {faltantes_insc} alumnos restantes, es altamente probable que tengan dudas sobre facilidades económicas."
             elif "ESPADA" in tutor_seleccionado.upper() or "RODRIGO" in tutor_seleccionado.upper():
-                estrategia_ia = f"El aula registra la brecha más alta con S/ {monto_pendiente:,.2f} pendientes. Aplica el <b>efecto comunidad visual</b>: comparte activamente los diseños de los uniformes y apóyate en los alumnos líderes ya pagados para armar los equipos deportivos (estrategia FOMO)."
+                estrategia_ia = f"El aula registra la brecha más alta con S/ {monto_pendiente:,.2f} pendientes. Aplica el <b>efecto comunidad visual</b>: comparte activamente los diseños de los uniformes y apóyate en los alumnos líderes."
             else:
-                estrategia_ia = f"Aborda a los alumnos rezagados de forma empática durante el control de asistencia. Enfatiza las Olimpiadas como un espacio de salud mental indispensable para liberar el estrés pre-examen."
+                estrategia_ia = f"Aborda a los alumnos rezagados de forma empática durante el control de asistencia. Enfatiza las Olimpiadas como un espacio de salud mental indispensable."
 
             st.markdown(f"""
             <div class="ia-box animate-up" style="border-left-color: #FF9800; background: linear-gradient(135deg, #fffde7 0%, #fff9c4 100%); color: #e65100;">
@@ -279,39 +259,25 @@ elif menu == "🏆 Olimpiadas":
             </div>
             """, unsafe_allow_html=True)
             
-        st.divider()
         col_graf1, col_graf2 = st.columns(2)
-        
         with col_graf1:
             fig_gauge = go.Figure(go.Indicator(
-                mode = "gauge+number",
-                value = avance,
-                title = {'text': "Velocímetro de Avance %"},
-                gauge = {
-                    'axis': {'range': [None, 120]},
-                    'bar': {'color': "#FF4B2B"},
-                    'steps': [
-                        {'range': [0, 50], 'color': "#ffebee"},
-                        {'range': [50, 80], 'color': "#fff9c4"},
-                        {'range': [80, 120], 'color': "#e8f5e9"}],
-                    'threshold': {'line': {'color': "green", 'width': 4}, 'thickness': 0.75, 'value': 100}
-                }
+                mode = "gauge+number", value = avance, title = {'text': "Velocímetro de Avance %"},
+                gauge = {'axis': {'range': [None, 120]}, 'bar': {'color': "#FF4B2B"},
+                         'steps': [{'range': [0, 50], 'color': "#ffebee"}, {'range': [50, 80], 'color': "#fff9c4"}, {'range': [80, 120], 'color': "#e8f5e9"}],
+                         'threshold': {'line': {'color': "green", 'width': 4}, 'thickness': 0.75, 'value': 100}}
             ))
             st.plotly_chart(fig_gauge, use_container_width=True)
-            
         with col_graf2:
             fig_pie = px.pie(values=[datos_tutor["YAPE"], datos_tutor["EFECTIVO"]], names=["Yape", "Efectivo"], hole=0.5, title="Distribución de Pagos")
             st.plotly_chart(fig_pie, use_container_width=True)
-            
         st.markdown('</div>', unsafe_allow_html=True)
 
     with tab3:
         st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
         st.subheader("👕 Control Avanzado de Tallas (Estructura Corporativa)")
-        
         df_olim_sub = df_olim[['Tutor', 'Ciclo', 'Pagantes']].copy().drop_duplicates(subset=['Tutor'])
         df_tallas_clean = df_tallas.copy().drop_duplicates(subset=['Tutor'])
-        
         df_control = pd.merge(df_olim_sub, df_tallas_clean, on='Tutor', how='left').fillna(0)
         
         for col in ['Pagantes', 'S', 'M', 'L', 'XL', 'Total Polos']:
@@ -324,7 +290,6 @@ elif menu == "🏆 Olimpiadas":
         col_t1, col_t2, col_t3 = st.columns(3)
         col_t1.metric("Total Polos Solicitados", int(total_polos_sede))
         col_t2.metric("Total Alumnos Pagantes", int(total_pagantes_sede))
-        
         if balance_sede == 0:
             col_t3.metric("Estado General Logístico", "✅ Inventario Cuadra Perfecto")
         elif balance_sede > 0:
@@ -333,27 +298,20 @@ elif menu == "🏆 Olimpiadas":
             col_t3.metric("Estado General Logístico", f"🟡 Faltan {int(abs(balance_sede))} polos por registrar", delta_color="inverse")
             
         st.divider()
-        
-        # ==============================================================
-        # NUEVA AUDITORÍA GRÁFICA LOGÍSTICA DE IA COMPLETA
-        # ==============================================================
         st.markdown("""
         <div class="ia-box">
             <h4>🧠 Auditoría Corporativa de Tallas & Uniformes por IA</h4>
-            <p><b>🚨 Control de Riesgos Logísticos:</b> Se identifica una brecha neta de <b>89 prendas pendientes</b>. Las aulas de <b>Nataly Martínez</b> (60 pagantes) y <b>Mariana Boza</b> (31 pagantes) representan puntos críticos de atención al registrar ausencia total de tallas en el sistema.</p>
-            <p><b>📐 Consistencia de Entregas:</b> Solo el salón de <b>Virginia Gaby</b> presenta un cuadre idóneo con apenas 1 polo faltante. El bloque de <b>Alexander Javier</b> reporta un excedente de +12 prendas que debe conciliarse frente a los pagos registrados.</p>
+            <p><b>🚨 Control de Riesgos Logísticos:</b> Se identifica una brecha neta de prendas pendientes. Aulas como las de Nataly Martínez y Mariana Boza representan puntos críticos al registrar ausencia total de tallas en el sistema.</p>
+            <p><b>📐 Consistencia de Entregas:</b> Solo el salón de Virginia Gaby presenta un cuadre idóneo. Otros bloques reportan excedentes que deben conciliarse frente a los pagos registrados.</p>
         </div>
         """, unsafe_allow_html=True)
         
-        # Gráfico visual de barras
         df_chart_tallas = df_control.melt(id_vars=['Tutor'], value_vars=['Total Polos', 'Pagantes'], var_name='Concepto', value_name='Cantidad')
         df_chart_tallas['Concepto'] = df_chart_tallas['Concepto'].replace({'Total Polos': 'Polos Registrados', 'Pagantes': 'Alumnos Pagantes'})
         fig_tallas_comp = px.bar(df_chart_tallas, x='Tutor', y='Cantidad', color='Concepto', barmode='group', color_discrete_sequence=["#1E3A8A", "#4CAF50"], title="Auditoría Visual: Alumnos Pagantes vs Camisetas Solicitadas")
         st.plotly_chart(fig_tallas_comp, use_container_width=True)
         
         st.subheader("📋 Resumen Logístico de Control")
-        
-        # LÓGICA ESTRUCTURAL INYECTADA PARA CUMPLIR EL CUADRE EXACCO SOLICITADO
         def clean_status_premium(row):
             t_name = str(row['Tutor']).upper()
             diff = row['Total Polos'] - row['Pagantes']
@@ -377,27 +335,9 @@ elif menu == "🏆 Olimpiadas":
 
         df_control['Estado / Pendiente'] = df_control.apply(clean_status_premium, axis=1)
         df_control['Observaciones de la Tabla'] = df_control.apply(clean_obs_premium, axis=1)
+        df_control_view = df_control.rename(columns={'Pagantes': 'Alumnos Pagantes', 'Total Polos': 'Polos Registrados'})
         
-        # Cambiar nombres de columnas para la visualización ejecutiva del dataframe
-        df_control_view = df_control.rename(columns={
-            'Pagantes': 'Alumnos Pagantes',
-            'Total Polos': 'Polos Registrados'
-        })
-        
-        st.dataframe(
-            df_control_view[['Tutor', 'Ciclo', 'Alumnos Pagantes', 'Polos Registrados', 'Estado / Pendiente', 'Observaciones de la Tabla']], 
-            use_container_width=True, 
-            hide_index=True
-        )
-        
-        with st.expander("🔍 Ver desglose detallado por tallas con Totales Pagados (S, M, L, XL)"):
-            st.dataframe(
-                df_control_view[['Tutor', 'S', 'M', 'L', 'XL', 'Polos Registrados', 'Alumnos Pagantes']], 
-                use_container_width=True, 
-                hide_index=True,
-                column_config={"Alumnos Pagantes": "Total Pagados", "Polos Registrados": "Total Polos"}
-            )
-            
+        st.dataframe(df_control_view[['Tutor', 'Ciclo', 'Alumnos Pagantes', 'Polos Registrados', 'Estado / Pendiente', 'Observaciones de la Tabla']], use_container_width=True, hide_index=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
@@ -417,7 +357,7 @@ elif menu == "⚠️ Morosidad":
     col_m3.metric("Índice de Morosidad", f"{pct_morosidad:.1f}%", delta="- Crítico" if pct_morosidad > 15 else "Estable", delta_color="inverse")
     st.markdown('</div>', unsafe_allow_html=True)
     
-    tutores_20 = df_mor_resumen[df_mor_resumen['NOT'] == 20]['TUTO'].unique()
+    tutores_20 = df_mor_resumen[df_mor_resumen['NOT'] == 20]['TUTO_CICLO'].unique()
     if len(tutores_20) > 0:
         estrellas_html = "".join([f"<span class='tutor-star'>⭐ {t}</span>" for t in tutores_20])
         st.markdown(f"<div class='hall-of-fame animate-up'><h3>🏆 SALÓN DE LA FAMA - NOTA 20 🏆</h3><p>¡Gestión perfecta!</p>{estrellas_html}</div>", unsafe_allow_html=True)
@@ -436,17 +376,20 @@ elif menu == "⚠️ Morosidad":
             st.markdown('<div class="web-card" style="height: 100%;">', unsafe_allow_html=True)
             st.subheader("💸 Deuda Acumulada (S/)")
             df_mor_resumen['DEUDA_SALON'] = df_mor_resumen['SUS'] * 510
-            fig_deuda = px.bar(df_mor_resumen, x="TUTO", y="DEUDA_SALON", text="DEUDA_SALON", color="DEUDA_SALON", color_continuous_scale="Reds")
+            # AHORA USA TUTO_CICLO PARA DIFERENCIAR SALONES DEL MISMO TUTOR
+            fig_deuda = px.bar(df_mor_resumen, x="TUTO_CICLO", y="DEUDA_SALON", text="DEUDA_SALON", color="DEUDA_SALON", color_continuous_scale="Reds")
             fig_deuda.update_traces(texttemplate='S/ %{text:,.2f}', textposition='outside')
+            fig_deuda.update_layout(xaxis_tickangle=-45)
             st.plotly_chart(fig_deuda, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
             
         with col_ia_moro:
             st.markdown('<div class="web-card" style="height: 100%;">', unsafe_allow_html=True)
-            st.subheader("🤖 Mapeo de IA por Tutor")
-            tutor_moro_ia = st.selectbox("Selecciona un tutor para evaluar su cartera:", df_mor_resumen["TUTO"].unique(), key="ia_moro")
+            st.subheader("🤖 Mapeo de IA por Salón")
+            # SELECCIÓN POR SALÓN ESPECÍFICO
+            tutor_moro_ia = st.selectbox("Selecciona un salón para evaluar su cartera:", df_mor_resumen["TUTO_CICLO"].unique(), key="ia_moro")
             
-            datos_moro_tutor = df_mor_resumen[df_mor_resumen["TUTO"] == tutor_moro_ia].iloc[0]
+            datos_moro_tutor = df_mor_resumen[df_mor_resumen["TUTO_CICLO"] == tutor_moro_ia].iloc[0]
             suspendidos = int(datos_moro_tutor['SUS'])
             deuda_tutor = suspendidos * 510
             cumplimiento = datos_moro_tutor['CUM']
@@ -458,11 +401,11 @@ elif menu == "⚠️ Morosidad":
                 color_ia = "#4CAF50" 
                 bg_ia = "#e8f5e9"
             elif suspendidos <= 5:
-                mensaje_ia = f"Gestión Estable pero con riesgo leve. Hay <b>{suspendidos} alumnos suspendidos</b>, generando una deuda proyectada de <b>S/ {deuda_tutor:,.2f}</b>. El cumplimiento es de <b>{cumplimiento}</b>. Se recomienda un contacto preventivo rápido vía WhatsApp para evitar que la deuda crezca y afecte la nota del próximo corte."
+                mensaje_ia = f"Gestión Estable pero con riesgo leve. Hay <b>{suspendidos} alumnos suspendidos</b>, generando una deuda proyectada de <b>S/ {deuda_tutor:,.2f}</b>. El cumplimiento es de <b>{cumplimiento}</b>. Se recomienda un contacto preventivo rápido vía WhatsApp."
                 color_ia = "#FF9800" 
                 bg_ia = "#fff3e0"
             else:
-                mensaje_ia = f"¡Alerta de Morosidad! El salón presenta <b>{suspendidos} alumnos suspendidos</b>, acumulando una deuda crítica de <b>S/ {deuda_tutor:,.2f}</b>. El índice de deserción es preocupante (<b>{desercion}</b>). Se requiere intervención urgente de cobranzas y apoyo psicológico para retener a los estudiantes antes de perderlos definitivamente."
+                mensaje_ia = f"¡Alerta de Morosidad! El salón presenta <b>{suspendidos} alumnos suspendidos</b>, acumulando una deuda crítica de <b>S/ {deuda_tutor:,.2f}</b>. El índice de deserción es preocupante (<b>{desercion}</b>). Se requiere intervención urgente de cobranzas."
                 color_ia = "#F44336" 
                 bg_ia = "#ffebee"
                 
@@ -573,7 +516,7 @@ elif menu == "🤖 Análisis Académico":
 
     st.divider()
     
-    st.subheader(f"📈 Evolución de Notas (Pasa el cursor sobre los puntos)")
+    st.subheader(f"📈 Evolución de Notas")
     fig_notas = px.line(datos_ia, x="EXAMEN", y="NOTA", markers=True, hover_data=["ASISTENCIA", "FALTA", "VARIACION", "SICA", "C+D", "CXM"])
     fig_notas.update_traces(marker=dict(size=10, color='#FF4B2B'), line=dict(width=3))
     st.plotly_chart(fig_notas, use_container_width=True)
@@ -592,46 +535,116 @@ elif menu == "🤖 Análisis Académico":
         <div class="mascot-avatar">🤖</div>
         <div class="mascot-speech-bubble">
             <h3 style='color: #4CAF50; font-weight: 800; margin: 0 0 10px 0;'>💡 Recomendación Estratégica para UNMSM</h3>
-            <p style="margin:0; color:#333; font-size:1rem;">Hola <b>{nombre_tutor}</b>. Para asegurar el máximo ingreso de vacantes a la Universidad Nacional Mayor de San Marcos, es vital enfocar los repasos en preguntas de destreza cognitiva (DECO).</p>
+            <p style="margin:0; color:#333; font-size:1rem;">Hola <b>{nombre_tutor}</b>. Para asegurar el máximo ingreso de vacantes a San Marcos, es vital enfocar los repasos en preguntas DECO.</p>
             <p style="margin:8px 0 0 0; color:#333; font-size:1rem;">📊 Analizando el rendimiento histórico de tu aula, la mayor prioridad de reforzamiento está en los bloques de <b>{cursos_bajos}</b>.</p>
-            <p style="margin:8px 0 0 0; font-style: italic; color:#666; font-size:0.95rem;">🚀 Acción inmediata: Ejecutar simulacros semanales cronometrados con control estricto de tiempos por sección para potenciar los puntajes de los muchachos. ¡Vamos por esos cachimbos!</p>
+            <p style="margin:8px 0 0 0; font-style: italic; color:#666; font-size:0.95rem;">🚀 Acción inmediata: Ejecutar simulacros semanales cronometrados con control estricto de tiempos. ¡Vamos por esos cachimbos!</p>
         </div>
     </div>
     """, unsafe_allow_html=True) 
 
 # ==========================================
-# PÁGINA 5: EVALUACIÓN BIMENSUAL
+# PÁGINA 5: EVALUACIÓN BIMENSUAL (CON FILTROS Y PERFIL IA)
 # ==========================================
 elif menu == "📈 Evaluación Bimensual":
     st.markdown('<p class="title-comas" style="font-size: 2.5rem;">Evaluación Corporativa Bimensual</p>', unsafe_allow_html=True)
     
-    st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
-    st.subheader("📊 Panel de Rendimiento de Tutores")
-    
-    promedio_global = df_bim['NOTA FINAL'].mean() if not df_bim.empty else 0
-    nota_max = df_bim['NOTA FINAL'].max() if not df_bim.empty else 0
-    mejor_tutor = df_bim.loc[df_bim['NOTA FINAL'].idxmax()]['TUTOR'] if not df_bim.empty else "N/A"
-    
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Promedio Global (Sede)", f"{promedio_global:.2f} / 20")
-    col2.metric("Tutor Destacado", mejor_tutor.split()[0].capitalize() if mejor_tutor != "N/A" else "N/A")
-    col3.metric("Nota Máxima Alcanzada", f"{nota_max:.2f}")
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    tab_bim1, tab_bim2, tab_bim3 = st.tabs(["📈 Gráficos de Rendimiento", "🏆 Ranking y Cuadro de Honor", "🧠 Análisis Estratégico (IA)"])
+    tab_bim1, tab_bim2, tab_bim3 = st.tabs(["📊 Rendimiento Global", "🎯 Perfil del Tutor (IA)", "🏆 Cuadro de Honor"])
     
     with tab_bim1:
-        st.markdown('<div class="web-card">', unsafe_allow_html=True)
-        st.subheader("Comparativa de Notas Finales por Periodo")
-        fig_bim = px.bar(df_bim, x="TUTOR", y="NOTA FINAL", color="PERIODO DE EVALUACION", barmode="group", text="NOTA FINAL", color_discrete_sequence=["#FF4B2B", "#4CAF50", "#FFC107"])
+        st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
+        st.subheader("📈 Análisis y Gráficos Interactivos")
+        
+        # FILTROS INTERACTIVOS
+        col_f1, col_f2 = st.columns(2)
+        with col_f1:
+            periodos = df_bim['PERIODO DE EVALUACION'].unique()
+            periodo_sel = st.selectbox("Filtrar por Periodo:", ["Todos"] + list(periodos))
+        with col_f2:
+            metricas_disp = ['NOTA FINAL', 'CUMP. DE META', 'ASISTENCIA Y PUNTUALIDAD', 'STUDY TIME', 'PLAN DE ACCIÓN', 'ENCUESTA TUTOR', 'EPPFF']
+            metrica_sel = st.selectbox("Métrica a graficar:", metricas_disp)
+            
+        df_bim_filt = df_bim if periodo_sel == "Todos" else df_bim[df_bim['PERIODO DE EVALUACION'] == periodo_sel]
+        
+        # KPI GLOBALES DEL FILTRO
+        promedio_metrica = df_bim_filt[metrica_sel].mean() if not df_bim_filt.empty else 0
+        mejor_tutor_metrica = df_bim_filt.loc[df_bim_filt[metrica_sel].idxmax()]['TUTOR'] if not df_bim_filt.empty else "N/A"
+        
+        c1, c2, c3 = st.columns(3)
+        c1.metric(f"Promedio de {metrica_sel}", f"{promedio_metrica:.2f}")
+        c2.metric("Tutor Destacado en Métrica", mejor_tutor_metrica.split()[0].capitalize() if mejor_tutor_metrica != "N/A" else "N/A")
+        c3.metric("Registros Evaluados", len(df_bim_filt))
+        
+        st.divider()
+        
+        fig_bim = px.bar(df_bim_filt, x="TUTOR", y=metrica_sel, color="PERIODO DE EVALUACION", barmode="group", text=metrica_sel, color_discrete_sequence=["#FF4B2B", "#4CAF50", "#FFC107"])
         fig_bim.update_traces(texttemplate='%{text:.2f}', textposition='outside')
         fig_bim.update_layout(xaxis_tickangle=-45, height=500)
         st.plotly_chart(fig_bim, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
         
     with tab_bim2:
+        st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
+        st.subheader("🎯 Perfil Estratégico por Tutor")
+        
+        # SELECCIÓN ESPECÍFICA PARA ANÁLISIS IA
+        col_t1, col_t2 = st.columns(2)
+        with col_t1:
+            tutor_perfil = st.selectbox("Selecciona al Tutor a evaluar:", df_bim["TUTOR"].unique())
+        with col_t2:
+            periodos_tutor = df_bim[df_bim["TUTOR"] == tutor_perfil]['PERIODO DE EVALUACION'].unique()
+            periodo_perfil = st.selectbox("Periodo de Evaluación:", periodos_tutor)
+            
+        datos_perfil = df_bim[(df_bim["TUTOR"] == tutor_perfil) & (df_bim["PERIODO DE EVALUACION"] == periodo_perfil)]
+        
+        if not datos_perfil.empty:
+            dp = datos_perfil.iloc[0]
+            
+            # Identificar fortalezas y debilidades automáticamente
+            dict_metricas = {
+                'Asistencia': dp['ASISTENCIA Y PUNTUALIDAD'],
+                'Study Time': dp['STUDY TIME'],
+                'Meta': dp['CUMP. DE META'],
+                'Plan Acción': dp['PLAN DE ACCIÓN'],
+                'Encuesta': dp['ENCUESTA TUTOR'],
+                'EPPFF': dp['EPPFF']
+            }
+            mejor_hab = max(dict_metricas, key=dict_metricas.get)
+            peor_hab = min(dict_metricas, key=dict_metricas.get)
+            
+            col_radar, col_texto = st.columns([1, 1.5])
+            
+            with col_radar:
+                fig_radar_tut = go.Figure(data=go.Scatterpolar(
+                  r=list(dict_metricas.values()) + [list(dict_metricas.values())[0]],
+                  theta=list(dict_metricas.keys()) + [list(dict_metricas.keys())[0]],
+                  fill='toself', line_color='#1E3A8A'
+                ))
+                fig_radar_tut.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 20])), showlegend=False, margin=dict(l=20, r=20, t=20, b=20), height=300)
+                st.plotly_chart(fig_radar_tut, use_container_width=True)
+                
+            with col_texto:
+                nombre_p = tutor_perfil.split()[0].capitalize()
+                st.markdown(f"""
+                <div class="mascot-container" style="margin-top:0;">
+                    <div class="mascot-avatar">👨‍🏫</div>
+                    <div class="mascot-speech-bubble">
+                        <h4 style="margin:0 0 5px 0; color:#1E3A8A; font-weight:800;">Feedback Corporativo IA</h4>
+                        <p style="margin:0; color:#333; font-size:1rem;">Hola <b>{nombre_p}</b>, tu nota final en este periodo fue de <b>{dp['NOTA FINAL']}</b>.</p>
+                        <p style="margin:8px 0 0 0; color:#333;">🌟 <b>Tu mayor fortaleza:</b> Has destacado excepcionalmente en <b>{mejor_hab}</b> ({dict_metricas[mejor_hab]} pts). ¡Sigue así!</p>
+                        <p style="margin:8px 0 0 0; color:#333;">⚠️ <b>Punto de mejora:</b> Hemos detectado una caída en <b>{peor_hab}</b> ({dict_metricas[peor_hab]} pts). Te recomendamos enfocarte en este indicador para la próxima evaluación.</p>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+            st.divider()
+            st.subheader("📑 Desglose de Calificaciones")
+            st.dataframe(datos_perfil, use_container_width=True, hide_index=True)
+            
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    with tab_bim3:
         st.markdown('<div class="web-card">', unsafe_allow_html=True)
-        st.subheader("🏆 Top 5 Tutores (Cuadro de Honor)")
+        st.subheader("🏆 Top 5 Tutores (Cuadro de Honor Histórico)")
         df_top = df_bim.sort_values(by="NOTA FINAL", ascending=False).head(5)
         st.dataframe(df_top[['PERIODO DE EVALUACION', 'TUTOR', 'NOTA FINAL', 'CUMP. DE META', 'ENCUESTA TUTOR']], use_container_width=True, hide_index=True)
         
@@ -639,14 +652,3 @@ elif menu == "📈 Evaluación Bimensual":
         st.subheader("📑 Base de Datos Completa")
         st.dataframe(df_bim, use_container_width=True, hide_index=True)
         st.markdown('</div>', unsafe_allow_html=True)
-        
-    with tab_bim3:
-        st.markdown(f"""
-        <div class="ia-box animate-up" style="height: 100%;">
-            <h3 style='color: #4CAF50; font-weight: 800; margin-bottom: 10px;'>🧠 Reporte Estratégico de Gestión</h3>
-            <p><b>1. Tendencia General:</b> El equipo mantiene un estándar sobresaliente con un promedio global de <b>{promedio_global:.2f}</b>. Esto refleja un compromiso sólido con los estándares de calidad de la sede.</p>
-            <p><b>2. Pilares de Éxito:</b> Se identifican fortalezas clave en el <i>Cumplimiento de Meta</i> y la <i>Satisfacción del Alumno (Encuestas)</i>, demostrando un excelente clima en las aulas.</p>
-            <p><b>3. Áreas de Oportunidad:</b> Se recomienda implementar un plan de acción inmediato para mejorar la <b>Asistencia a Study Time (S.T.)</b> y la ejecución de los <b>EPPFF</b>, ya que presentan los indicadores más bajos del periodo.</p>
-            <p>🚀 <i>Directiva: Felicitar al top 5 en la próxima reunión de equipo y programar clínicas de capacitación para los indicadores de Study Time.</i></p>
-        </div>
-        """, unsafe_allow_html=True)  
