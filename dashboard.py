@@ -31,8 +31,33 @@ st.markdown("""
     
     .ia-box { background: linear-gradient(135deg, #f6f8fd 0%, #f1f5f9 100%); border-radius: 15px; padding: 25px; border-left: 6px solid #4CAF50; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
     
-    .greeting { font-size: 1.1rem; font-weight: 400; color: #333; text-align: left; margin-top: 30px; padding: 25px; background: rgba(255, 75, 43, 0.05); border-radius: 15px; border-left: 6px solid #FF4B2B;}
-    
+    /* DISEÑO DE MASCOTA PERSONAJE INTERACTIVO */
+    .mascot-container {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+        margin-top: 25px;
+        border-left: 6px solid #FF4B2B;
+    }
+    .mascot-avatar {
+        font-size: 3rem;
+        background: #f1f5f9;
+        padding: 12px;
+        border-radius: 50%;
+        box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: pulse mascot 2s infinite;
+    }
+    .mascot-speech-bubble {
+        flex: 1;
+    }
+
     /* Estilo para las pestañas (Tabs) */
     .stTabs [data-baseweb="tab-list"] { gap: 24px; }
     .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: transparent; border-radius: 4px 4px 0px 0px; gap: 1px; padding-top: 10px; padding-bottom: 10px; font-weight: 600; font-size: 1.1rem; }
@@ -56,7 +81,7 @@ st.markdown("""
         animation: slide-anim 10s infinite;
     }
     .slide-img:nth-child(1) { animation-delay: 0s; }
-    .slide-img:nth-child(2) { animation-delay: 5s; }
+    .slide-img:nth-child(2) { animation-delay: 3s; }
     
     @keyframes slide-anim {
         0%, 40% { opacity: 1; }
@@ -246,13 +271,24 @@ elif menu == "🏆 Olimpiadas":
         with col_graf2:
             fig_pie = px.pie(values=[datos_tutor["YAPE"], datos_tutor["EFECTIVO"]], names=["Yape", "Efectivo"], hole=0.5, title="Distribución de Pagos")
             st.plotly_chart(fig_pie, use_container_width=True)
+            
+        # PERSONAJE INTERACTIVO DE SALUDO AL TUTOR
+        nombre_tutor_greet = tutor_seleccionado.split()[0].capitalize()
+        st.markdown(f"""
+        <div class="mascot-container animate-up">
+            <div class="mascot-avatar">👨‍🏫</div>
+            <div class="mascot-speech-bubble">
+                <h4 style="margin:0; color:#FF4B2B; font-weight:800;">¡Hola {nombre_tutor_greet}!</h4>
+                <p style="margin:5px 0 0 0; color:#333; font-size:1rem;">Tu salón está respondiendo activamente en esta campaña de las Olimpiadas 2026. ¡Sigue impulsando la recaudación para asegurar el primer puesto de la sede! 🚀</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with tab3:
         st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
         st.subheader("👕 Control de Tallas por Tutor (Lista Única)")
         
-        # CORRECCIÓN DE DUPLICADOS: drop_duplicates asegura una línea por tutor único
         df_olim_sub = df_olim[['Tutor', 'Pagantes']].copy().drop_duplicates(subset=['Tutor'])
         df_tallas_clean = df_tallas.copy().drop_duplicates(subset=['Tutor'])
         
@@ -293,7 +329,6 @@ elif menu == "🏆 Olimpiadas":
         st.plotly_chart(fig_tallas_comp, use_container_width=True)
         
         st.subheader("📋 Resumen de Control")
-        # CORRECCIÓN DE MENSAJE SOLICITADO: "le falta" o "se excede"
         def clean_status(row):
             diff = row['Total Polos'] - row['Pagantes']
             if diff == 0: return "✅ Cuadra Perfecto"
@@ -303,8 +338,14 @@ elif menu == "🏆 Olimpiadas":
         df_control['Observación'] = df_control.apply(clean_status, axis=1)
         st.dataframe(df_control[['Tutor', 'Total Polos', 'Pagantes', 'Observación']], use_container_width=True, hide_index=True)
         
+        # 1. ACTUALIZADO: SE AGREGÓ LA COLUMNA 'PAGANTES' (TOTAL PAGADOS) ADENTRO DEL DESGLOSE DEL EXPANDER
         with st.expander("🔍 Ver desglose detallado por tallas (S, M, L, XL)"):
-            st.dataframe(df_control[['Tutor', 'S', 'M', 'L', 'XL', 'Total Polos']], use_container_width=True, hide_index=True)
+            st.dataframe(
+                df_control[['Tutor', 'S', 'M', 'L', 'XL', 'Total Polos', 'Pagantes']], 
+                use_container_width=True, 
+                hide_index=True,
+                column_config={"Pagantes": "Total Pagados"}
+            )
             
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -377,7 +418,7 @@ elif menu == "⚠️ Morosidad":
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
-# PÁGINA 4: ANÁLISIS ACADÉMICO (IA)
+# PÁGINA 4: ANÁLISIS ACADÉMICO (IA WITH MASCOT)
 # ==========================================
 elif menu == "🤖 Análisis Académico":
     st.markdown('<p class="title-comas" style="font-size: 2.5rem;">Inteligencia Académica</p>', unsafe_allow_html=True)
@@ -442,16 +483,20 @@ elif menu == "🤖 Análisis Académico":
     st.dataframe(datos_ia[columnas_mostrar], use_container_width=True, hide_index=True)
     st.markdown('</div>', unsafe_allow_html=True)
     
+    # 2. ACTUALIZADO: SE REDISEÑÓ EL CUADRO DE RECOMENDACIÓN CON UN SÚPER ASISTENTE VIRTUAL DE IA ROBOT ("🤖") INTERACTIVO
     nombre_tutor = str(tutor_ia).split()[0].capitalize()
     ultimo_examen = datos_ia.iloc[-1] if not datos_ia.empty else None
     cursos_bajos = f"{ultimo_examen['C+D']} y {ultimo_examen['CXM']}" if ultimo_examen is not None and 'C+D' in ultimo_examen else "Letras y Ciencias"
     
     st.markdown(f"""
-    <div class='greeting animate-up'>
-        <h3 style='color: #FF4B2B; font-weight: 800; margin-bottom: 10px;'>💡 Recomendación IA para UNMSM</h3>
-        <p>Hola <b>{nombre_tutor}</b>. Para asegurar vacantes en San Marcos, te sugerimos enfocar los repasos en preguntas DECO.</p>
-        <p>📊 Según el último examen, debes reforzar urgentemente <b>{cursos_bajos}</b>.</p>
-        <p>🚀 <i>Estrategia: Aplica simulacros cronometrados semanales y tutorías personalizadas. ¡Vamos por esos cachimbos!</i></p>
+    <div class="mascot-container animate-up" style="background: rgba(76, 175, 80, 0.05); border-left-color: #4CAF50;">
+        <div class="mascot-avatar">🤖</div>
+        <div class="mascot-speech-bubble">
+            <h3 style='color: #4CAF50; font-weight: 800; margin: 0 0 10px 0;'>💡 Recomendación Estratégica para UNMSM</h3>
+            <p style="margin:0; color:#333; font-size:1rem;">Hola <b>{nombre_tutor}</b>. Para asegurar el máximo ingreso de vacantes a la Universidad Nacional Mayor de San Marcos, es vital enfocar los repasos en el formato de preguntas de destreza cognitiva (DECO).</p>
+            <p style="margin:8px 0 0 0; color:#333; font-size:1rem;">📊 Analizando el rendimiento histórico de tu aula, la mayor prioridad de reforzamiento está en los bloques de <b>{cursos_bajos}</b>.</p>
+            <p style="margin:8px 0 0 0; font-style: italic; color:#666; font-size:0.95rem;">🚀 Acción inmediata: Ejecutar simulacros semanales cronometrados con control estricto de tiempos por sección para potenciar los puntajes de los muchachos. ¡Vamos por esos cachimbos!</p>
+        </div>
     </div>
     """, unsafe_allow_html=True) 
 
@@ -505,4 +550,4 @@ elif menu == "📈 Evaluación Bimensual":
             <p><b>3. Áreas de Oportunidad:</b> Se recomienda implementar un plan de acción inmediato para mejorar la <b>Asistencia a Study Time (S.T.)</b> y la ejecución de los <b>EPPFF</b>, ya que presentan los indicadores más bajos del periodo.</p>
             <p>🚀 <i>Directiva: Felicitar al top 5 en la próxima reunión de equipo y programar clínicas de capacitación para los indicadores de Study Time.</i></p>
         </div>
-        """, unsafe_allow_html=True)   
+        """, unsafe_allow_html=True) 
