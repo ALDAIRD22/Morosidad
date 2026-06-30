@@ -36,6 +36,32 @@ st.markdown("""
     /* Estilo para las pestañas (Tabs) */
     .stTabs [data-baseweb="tab-list"] { gap: 24px; }
     .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: transparent; border-radius: 4px 4px 0px 0px; gap: 1px; padding-top: 10px; padding-bottom: 10px; font-weight: 600; font-size: 1.1rem; }
+    
+    /* ANIMACIÓN DE TRANSICIÓN (SLIDESHOW) */
+    .slider-wrapper {
+        position: relative;
+        width: 100%;
+        height: 500px;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    .slide-img {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0;
+        animation: slide-anim 10s infinite;
+    }
+    .slide-img:nth-child(1) { animation-delay: 0s; }
+    .slide-img:nth-child(2) { animation-delay: 5s; }
+    
+    @keyframes slide-anim {
+        0%, 40% { opacity: 1; }
+        50%, 90% { opacity: 0; }
+        100% { opacity: 1; }
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -51,7 +77,6 @@ def load_data():
     url_bim = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=1034063425"
     
     try:
-        # 1. OLIMPIADAS
         df_olim = pd.read_csv(url_olim)
         df_olim.columns = df_olim.columns.str.strip()
         df_olim = df_olim.dropna(subset=["Tutor"])
@@ -60,7 +85,6 @@ def load_data():
             if col in df_olim.columns:
                 df_olim[col] = pd.to_numeric(df_olim[col].astype(str).str.replace(r'[S/,\s%]', '', regex=True).str.replace('-', '0'), errors='coerce').fillna(0)
 
-        # 2. MOROSIDAD - RESUMEN
         df_mor_resumen = pd.read_csv(url_mor, skiprows=1, usecols=range(0, 9))
         df_mor_resumen.columns = ["FECHA", "CICLO", "TUTO", "MAT", "PAG", "SUS", "DES", "CUM", "NOT"]
         df_mor_resumen = df_mor_resumen.dropna(subset=["TUTO"])
@@ -68,17 +92,14 @@ def load_data():
         for col in ["MAT", "PAG", "SUS", "NOT"]:
             df_mor_resumen[col] = pd.to_numeric(df_mor_resumen[col], errors='coerce').fillna(0)
 
-        # 3. MOROSIDAD - ALUMNOS
         df_mor_alumnos = pd.read_csv(url_mor, skiprows=1, usecols=range(23, 30))
         df_mor_alumnos.columns = ["#", "DNI", "ALUMNO", "CORTE", "Tutor", "CONDICIÓN PAGO", "Celular"]
         df_mor_alumnos = df_mor_alumnos.dropna(subset=["DNI", "ALUMNO"])
 
-        # 4. CUOTAS
         df_cuotas = pd.read_csv(url_mor, skiprows=3, usecols=range(11, 21))
         df_cuotas.columns = ["CUOTA", "SAN MAR", "INT MAR", "SAN ABR", "INT ABR", "SAN MAY", "INT MAY", "SAN JUL", "REP JUL", "SAN ENE"]
         df_cuotas = df_cuotas.dropna(subset=["CUOTA"])
 
-        # 5. ANÁLISIS ACADÉMICO
         df_analisis = pd.read_csv(url_ana)
         df_analisis.columns = df_analisis.columns.str.strip()
         df_analisis = df_analisis.dropna(subset=["TUTOR", "NOTA"])
@@ -86,7 +107,6 @@ def load_data():
             if col in df_analisis.columns:
                 df_analisis[col] = pd.to_numeric(df_analisis[col].astype(str).str.replace('%', ''), errors='coerce').fillna(0)
 
-        # 6. BIMENSUAL (NUEVA PESTAÑA)
         df_bim = pd.read_csv(url_bim)
         df_bim.columns = df_bim.columns.str.strip()
         df_bim = df_bim.dropna(subset=["TUTOR"])
@@ -99,7 +119,6 @@ def load_data():
         ]
         for col in cols_num_bim:
             if col in df_bim.columns:
-                # Limpiar cualquier caracter no numérico excepto punto decimal
                 df_bim[col] = pd.to_numeric(df_bim[col].astype(str).str.replace(r'[^\d.]', '', regex=True), errors='coerce').fillna(0)
 
         return df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis, df_bim
@@ -121,19 +140,29 @@ st.sidebar.title("Navegación Web")
 menu = st.sidebar.radio("", ("🏠 Inicio", "🏆 Olimpiadas", "⚠️ Morosidad", "🤖 Análisis Académico", "📈 Evaluación Bimensual"))
 
 # ==========================================
-# PÁGINA 1: INICIO
+# PÁGINA 1: INICIO (CARRUSEL)
 # ==========================================
 if menu == "🏠 Inicio":
     st.balloons()
     st.markdown('<div class="animate-up"><p class="title-comas">SISTEMA WEB COMAS</p><p class="subtitle">🔥 LA MEJOR SEDE - LA NÚMERO 1 🔥</p></div>', unsafe_allow_html=True)
     
     st.markdown('<div class="web-card">', unsafe_allow_html=True)
-    st.subheader("📸 Portada de la Sede")
-    imagen_subida = st.file_uploader("Sube una imagen de tu equipo (JPG/PNG)", type=["jpg", "png", "jpeg"])
-    if imagen_subida is not None:
-        st.image(imagen_subida, use_column_width=True, caption="Sede Comas - Oficial")
-    else:
-        st.image("https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80", use_column_width=True)
+    st.subheader("📸 Galería de la Sede")
+    
+    # ==========================================================
+    # AQUI DEBES PEGAR LOS LINKS DIRECTOS DE TUS FOTOS
+    # ==========================================================
+    LINK_FOTO_1 = "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+    LINK_FOTO_2 = "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+    
+    # HTML del carrusel con transición CSS
+    st.markdown(f"""
+        <div class="slider-wrapper">
+            <img class="slide-img" src="{LINK_FOTO_1}" alt="Foto 1">
+            <img class="slide-img" src="{LINK_FOTO_2}" alt="Foto 2">
+        </div>
+    """, unsafe_allow_html=True)
+    
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
@@ -240,7 +269,6 @@ elif menu == "⚠️ Morosidad":
             tutor_moroso = st.selectbox("Filtrar alumnos por tutor:", ["Todos"] + list(df_mor_alumnos["Tutor"].unique()))
             
         df_filtrado = df_mor_alumnos if tutor_moroso == "Todos" else df_mor_alumnos[df_mor_alumnos["Tutor"] == tutor_moroso]
-        
         df_filtrado = df_filtrado.copy()
         df_filtrado["#"] = range(1, len(df_filtrado) + 1)
         
@@ -350,7 +378,7 @@ elif menu == "🤖 Análisis Académico":
     """, unsafe_allow_html=True) 
 
 # ==========================================
-# PÁGINA 5: EVALUACIÓN BIMENSUAL (NUEVO)
+# PÁGINA 5: EVALUACIÓN BIMENSUAL
 # ==========================================
 elif menu == "📈 Evaluación Bimensual":
     st.markdown('<p class="title-comas" style="font-size: 2.5rem;">Evaluación Corporativa Bimensual</p>', unsafe_allow_html=True)
