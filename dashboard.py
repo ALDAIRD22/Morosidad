@@ -41,7 +41,7 @@ st.markdown("""
     .slider-wrapper {
         position: relative;
         width: 100%;
-        height: 500px;
+        height: 550px;
         border-radius: 15px;
         overflow: hidden;
         box-shadow: 0 10px 30px rgba(0,0,0,0.15);
@@ -140,26 +140,24 @@ st.sidebar.title("Navegación Web")
 menu = st.sidebar.radio("", ("🏠 Inicio", "🏆 Olimpiadas", "⚠️ Morosidad", "🤖 Análisis Académico", "📈 Evaluación Bimensual"))
 
 # ==========================================
-# PÁGINA 1: INICIO (CARRUSEL)
+# PÁGINA 1: INICIO (CARRUSEL EN VIVO)
 # ==========================================
 if menu == "🏠 Inicio":
     st.balloons()
     st.markdown('<div class="animate-up"><p class="title-comas">SISTEMA WEB COMAS</p><p class="subtitle">🔥 LA MEJOR SEDE - LA NÚMERO 1 🔥</p></div>', unsafe_allow_html=True)
     
     st.markdown('<div class="web-card">', unsafe_allow_html=True)
-    st.subheader("📸 Galería de la Sede")
+    st.subheader("📸 Galería Fotográfica de la Sede")
     
-    # ==========================================================
-    # AQUI DEBES PEGAR LOS LINKS DIRECTOS DE TUS FOTOS
-    # ==========================================================
-    LINK_FOTO_1 = "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
-    LINK_FOTO_2 = "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+    # ENLACES DIRECTOS PROCESADOS DESDE TU GOOGLE DRIVE
+    LINK_FOTO_1 = "https://drive.google.com/uc?id=1xx_WqMIvabKhGEzMqyBtBOUYwuOD0Yyj"
+    LINK_FOTO_2 = "https://drive.google.com/uc?id=1Y9n4xlDrUS1yf5wlExwqUpsUuMrECmtR"
     
-    # HTML del carrusel con transición CSS
+    # Renderizar el contenedor web con la transición crossfade automática
     st.markdown(f"""
         <div class="slider-wrapper">
-            <img class="slide-img" src="{LINK_FOTO_1}" alt="Foto 1">
-            <img class="slide-img" src="{LINK_FOTO_2}" alt="Foto 2">
+            <img class="slide-img" src="{LINK_FOTO_1}" alt="Equipo Comas Foto 1">
+            <img class="slide-img" src="{LINK_FOTO_2}" alt="Equipo Comas Foto 2">
         </div>
     """, unsafe_allow_html=True)
     
@@ -269,6 +267,7 @@ elif menu == "⚠️ Morosidad":
             tutor_moroso = st.selectbox("Filtrar alumnos por tutor:", ["Todos"] + list(df_mor_alumnos["Tutor"].unique()))
             
         df_filtrado = df_mor_alumnos if tutor_moroso == "Todos" else df_mor_alumnos[df_mor_alumnos["Tutor"] == tutor_moroso]
+        
         df_filtrado = df_filtrado.copy()
         df_filtrado["#"] = range(1, len(df_filtrado) + 1)
         
@@ -279,7 +278,7 @@ elif menu == "⚠️ Morosidad":
         
         df_mostrar = df_filtrado.copy()
         df_mostrar['Celular_Limpio'] = df_mostrar['Celular'].astype(str).str.replace(r'\D', '', regex=True)
-        df_mostrar['Acción'] = "https://wa.me/51" + df_mostrar['Celular_Limpio'] + "?text=Hola%20apoderado%20de%20" + df_mostrar['ALUMNO'].astype(str).str.replace(' ', '%20') + ",%20le%20escribimos%20de%20la%20Sede%20Comas%20para%20recordarle%20amablemente%20el%20pago%20de%20su%20cuota%20pendiente.%20Muchas%20gracias."
+        df_mostrar['Acción'] = "https://wa.me/" + df_mostrar['Celular_Limpio'] + "?text=Hola%20apoderado%20de%20" + df_mostrar['ALUMNO'].astype(str).str.replace(' ', '%20') + ",%20le%20escribimos%20de%20la%20Sede%20Comas%20para%20recordarle%20amablemente%20el%20pago%20de%20su%20cuota%20pendiente.%20Muchas%20gracias."
         df_mostrar = df_mostrar.drop(columns=['Celular_Limpio'])
         
         st.dataframe(
@@ -427,4 +426,4 @@ elif menu == "📈 Evaluación Bimensual":
             <p><b>3. Áreas de Oportunidad:</b> Se recomienda implementar un plan de acción inmediato para mejorar la <b>Asistencia a Study Time (S.T.)</b> y la ejecución de los <b>EPPFF</b>, ya que presentan los indicadores más bajos del periodo.</p>
             <p>🚀 <i>Directiva: Felicitar al top 5 en la próxima reunión de equipo y programar clínicas de capacitación para los indicadores de Study Time.</i></p>
         </div>
-        """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True) 
