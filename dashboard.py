@@ -12,7 +12,7 @@ st.set_page_config(page_title="Dashboard Comas 2026", page_icon="🔥", layout="
 
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght=300;400;600;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap');
     
     html, body, [class*="css"] { font-family: 'Poppins', sans-serif; }
     
@@ -45,6 +45,7 @@ st.markdown("""
         border-radius: 15px;
         overflow: hidden;
         box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        background-color: #f0f2f6;
     }
     .slide-img {
         position: absolute;
@@ -77,6 +78,7 @@ def load_data():
     url_bim = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=1034063425"
     
     try:
+        # 1. OLIMPIADAS
         df_olim = pd.read_csv(url_olim)
         df_olim.columns = df_olim.columns.str.strip()
         df_olim = df_olim.dropna(subset=["Tutor"])
@@ -85,6 +87,15 @@ def load_data():
             if col in df_olim.columns:
                 df_olim[col] = pd.to_numeric(df_olim[col].astype(str).str.replace(r'[S/,\s%]', '', regex=True).str.replace('-', '0'), errors='coerce').fillna(0)
 
+        # 1.5 TALLAS DE OLIMPIADAS (Lee desde la fila 12)
+        df_tallas = pd.read_csv(url_olim, skiprows=11, usecols=range(0, 5))
+        df_tallas.columns = ["Tutor", "S", "M", "L", "XL"]
+        df_tallas = df_tallas.dropna(subset=["Tutor"])
+        for col in ["S", "M", "L", "XL"]:
+            df_tallas[col] = pd.to_numeric(df_tallas[col], errors='coerce').fillna(0).astype(int)
+        df_tallas["Total Polos"] = df_tallas["S"] + df_tallas["M"] + df_tallas["L"] + df_tallas["XL"]
+
+        # 2. MOROSIDAD - RESUMEN
         df_mor_resumen = pd.read_csv(url_mor, skiprows=1, usecols=range(0, 9))
         df_mor_resumen.columns = ["FECHA", "CICLO", "TUTO", "MAT", "PAG", "SUS", "DES", "CUM", "NOT"]
         df_mor_resumen = df_mor_resumen.dropna(subset=["TUTO"])
@@ -92,14 +103,17 @@ def load_data():
         for col in ["MAT", "PAG", "SUS", "NOT"]:
             df_mor_resumen[col] = pd.to_numeric(df_mor_resumen[col], errors='coerce').fillna(0)
 
+        # 3. MOROSIDAD - ALUMNOS
         df_mor_alumnos = pd.read_csv(url_mor, skiprows=1, usecols=range(23, 30))
         df_mor_alumnos.columns = ["#", "DNI", "ALUMNO", "CORTE", "Tutor", "CONDICIÓN PAGO", "Celular"]
         df_mor_alumnos = df_mor_alumnos.dropna(subset=["DNI", "ALUMNO"])
 
+        # 4. CUOTAS
         df_cuotas = pd.read_csv(url_mor, skiprows=3, usecols=range(11, 21))
         df_cuotas.columns = ["CUOTA", "SAN MAR", "INT MAR", "SAN ABR", "INT ABR", "SAN MAY", "INT MAY", "SAN JUL", "REP JUL", "SAN ENE"]
         df_cuotas = df_cuotas.dropna(subset=["CUOTA"])
 
+        # 5. ANÁLISIS ACADÉMICO
         df_analisis = pd.read_csv(url_ana)
         df_analisis.columns = df_analisis.columns.str.strip()
         df_analisis = df_analisis.dropna(subset=["TUTOR", "NOTA"])
@@ -107,6 +121,7 @@ def load_data():
             if col in df_analisis.columns:
                 df_analisis[col] = pd.to_numeric(df_analisis[col].astype(str).str.replace('%', ''), errors='coerce').fillna(0)
 
+        # 6. BIMENSUAL
         df_bim = pd.read_csv(url_bim)
         df_bim.columns = df_bim.columns.str.strip()
         df_bim = df_bim.dropna(subset=["TUTOR"])
@@ -121,12 +136,12 @@ def load_data():
             if col in df_bim.columns:
                 df_bim[col] = pd.to_numeric(df_bim[col].astype(str).str.replace(r'[^\d.]', '', regex=True), errors='coerce').fillna(0)
 
-        return df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis, df_bim
+        return df_olim, df_tallas, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis, df_bim
     except Exception as e:
         st.error(f"Error al conectar con Google Sheets. Detalle: {e}")
         st.stop()
 
-df_olim, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis, df_bim = load_data()
+df_olim, df_tallas, df_mor_resumen, df_mor_alumnos, df_cuotas, df_analisis, df_bim = load_data()
 
 @st.cache_data
 def convert_df(df):
@@ -140,7 +155,7 @@ st.sidebar.title("Navegación Web")
 menu = st.sidebar.radio("", ("🏠 Inicio", "🏆 Olimpiadas", "⚠️ Morosidad", "🤖 Análisis Académico", "📈 Evaluación Bimensual"))
 
 # ==========================================
-# PÁGINA 1: INICIO (CARRUSEL CONFIGURADO)
+# PÁGINA 1: INICIO (CARRUSEL CON LINKS BYPASS GOOGLE)
 # ==========================================
 if menu == "🏠 Inicio":
     st.balloons()
@@ -149,18 +164,16 @@ if menu == "🏠 Inicio":
     st.markdown('<div class="web-card">', unsafe_allow_html=True)
     st.subheader("📸 Galería Fotográfica de la Sede")
     
-    # ENLACES DE IMGBB REQUERIDOS
-    LINK_FOTO_1 = "https://ibb.co/tp7RCjhv"
-    LINK_FOTO_2 = "https://ibb.co/hJr5sMpd"
+    # NUEVO MÉTODO INFALIBLE PARA SALTAR EL BLOQUEO DE GOOGLE DRIVE (lh3.googleusercontent.com)
+    LINK_FOTO_1 = "https://lh3.googleusercontent.com/d/1Y9n4xlDrUS1yf5wlExwqUpsUuMrECmtR"
+    LINK_FOTO_2 = "https://lh3.googleusercontent.com/d/1xx_WqMIvabKhGEzMqyBtBOUYwuOD0Yyj"
     
-    # Renderizar el carrusel animado
     st.markdown(f"""
         <div class="slider-wrapper">
-            <img class="slide-img" src="{LINK_FOTO_1}">
-            <img class="slide-img" src="{LINK_FOTO_2}">
+            <img class="slide-img" src="{LINK_FOTO_1}" alt="Sede Comas 1" onerror="this.style.display='none'">
+            <img class="slide-img" src="{LINK_FOTO_2}" alt="Sede Comas 2" onerror="this.style.display='none'">
         </div>
     """, unsafe_allow_html=True)
-    
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
@@ -169,7 +182,7 @@ if menu == "🏠 Inicio":
 elif menu == "🏆 Olimpiadas":
     st.markdown('<p class="title-comas" style="font-size: 2.5rem;">Recaudación Olimpiadas</p>', unsafe_allow_html=True)
     
-    tab1, tab2 = st.tabs(["📊 Resumen Global", "🎯 Detalle por Tutor"])
+    tab1, tab2, tab3 = st.tabs(["📊 Resumen Global", "🎯 Detalle por Tutor", "👕 Control de Tallas"])
     
     with tab1:
         st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
@@ -233,6 +246,33 @@ elif menu == "🏆 Olimpiadas":
             st.plotly_chart(fig_pie, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
+    with tab3:
+        st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
+        st.subheader("👕 Control de Tallas vs Pagantes Reales")
+        
+        # Cruzar datos de tallas con los pagantes reales
+        df_control = pd.merge(df_tallas, df_olim[['Tutor', 'Pagantes']], on='Tutor', how='left').fillna(0)
+        df_control['Pagantes'] = df_control['Pagantes'].astype(int)
+        df_control['Diferencia'] = df_control['Total Polos'] - df_control['Pagantes']
+        
+        # Función para pintar alertas
+        def formato_alerta(val):
+            if val > 0: return f"🔴 Sobran {int(val)} polos"
+            elif val < 0: return f"🟡 Faltan {int(abs(val))} polos"
+            else: return "✅ Cuadra Exacto"
+            
+        df_control['Estado / Alerta'] = df_control['Diferencia'].apply(formato_alerta)
+        
+        # Mostrar tabla interactiva
+        st.dataframe(
+            df_control[['Tutor', 'S', 'M', 'L', 'XL', 'Total Polos', 'Pagantes', 'Estado / Alerta']], 
+            use_container_width=True, 
+            hide_index=True
+        )
+        
+        st.info("💡 La columna 'Estado / Alerta' resta el Total de Polos pedidos menos la cantidad de Pagantes reales para detectar errores.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
 # ==========================================
 # PÁGINA 3: MOROSIDAD
 # ==========================================
@@ -283,7 +323,7 @@ elif menu == "⚠️ Morosidad":
         
         df_mostrar = df_filtrado.copy()
         df_mostrar['Celular_Limpio'] = df_mostrar['Celular'].astype(str).str.replace(r'\D', '', regex=True)
-        df_mostrar['Acción'] = "https://wa.me/" + df_mostrar['Celular_Limpio'] + "?text=Hola%20apoderado%20de%20" + df_mostrar['ALUMNO'].astype(str).str.replace(' ', '%20') + ",%20le%20escribimos%20de%20la%20Sede%20Comas%20para%20recordarle%20amablemente%20el%20pago%20de%20su%20cuota%20pendiente.%20Muchas%20gracias."
+        df_mostrar['Acción'] = "https://wa.me/51" + df_mostrar['Celular_Limpio'] + "?text=Hola%20apoderado%20de%20" + df_mostrar['ALUMNO'].astype(str).str.replace(' ', '%20') + ",%20le%20escribimos%20de%20la%20Sede%20Comas%20para%20recordarle%20amablemente%20el%20pago%20de%20su%20cuota%20pendiente.%20Muchas%20gracias."
         df_mostrar = df_mostrar.drop(columns=['Celular_Limpio'])
         
         st.dataframe(
