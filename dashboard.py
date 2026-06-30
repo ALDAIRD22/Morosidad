@@ -52,7 +52,6 @@ st.markdown("""
         display: flex;
         align-items: center;
         justify-content: center;
-        animation: pulse mascot 2s infinite;
     }
     .mascot-speech-bubble {
         flex: 1;
@@ -81,7 +80,7 @@ st.markdown("""
         animation: slide-anim 10s infinite;
     }
     .slide-img:nth-child(1) { animation-delay: 0s; }
-    .slide-img:nth-child(2) { animation-delay: 3s; }
+    .slide-img:nth-child(2) { animation-delay: 5s; }
     
     @keyframes slide-anim {
         0%, 40% { opacity: 1; }
@@ -249,6 +248,42 @@ elif menu == "🏆 Olimpiadas":
         col4.metric("Falta Recaudar", f"S/ {datos_tutor['Falta']:,.2f}")
         
         st.divider()
+        
+        # ==========================================
+        # NUEVO INDICADOR DE AUDITORÍA LOGÍSTICA DE IA (OPCIONES DE PERSUASIÓN)
+        # ==========================================
+        nombre_tutor_greet = tutor_seleccionado.split()[0].capitalize()
+        faltantes_insc = int(datos_tutor['Meta'] - datos_tutor['Pagantes'])
+        monto_pendiente = datos_tutor['Falta']
+        ciclo_actual = datos_tutor['Ciclo']
+        
+        if avance >= 100:
+            st.markdown(f"""
+            <div class="ia-box animate-up" style="border-left-color: #4CAF50; background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); color: #1b5e20;">
+                <h4 style="margin:0 0 5px 0; font-weight:800; color:#1b5e20;">🏆 ¡Muy bien, {nombre_tutor_greet}! Meta Completada</h4>
+                <p style="margin:0; font-size:1rem;">Excelente gestión institucional en el aula del bloque <b>{ciclo_actual}</b>. Has logrado comprometer al <b>{avance}%</b> de tus metas, demostrando un alto nivel de organización y compromiso de tus alumnos.</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            # Personalizar estrategias detalladas basadas en el tutor o tipo de ciclo
+            if "BOZA" in tutor_seleccionado.upper() or "MARIANA" in tutor_seleccionado.upper():
+                estrategia_ia = f"Apela al <b>sentido de pertenencia e identidad de grupo</b>. Al ser un ciclo semi anual, dedica 5 minutos al inicio de la sesión para concientizar que el aula necesita la participación colectiva. Pon un reto a corto plazo con los delegados."
+            elif "ALCARRAZ" in tutor_seleccionado.upper() or "ALEXANDER" in tutor_seleccionado.upper():
+                estrategia_ia = f"Realiza un <b>mapeo y abordaje uno a uno</b> en los recesos. Con {faltantes_insc} alumnos restantes, es altamente probable que tengan dudas sobre facilidades económicas. Coordina fraccionamientos cortos con la administración de la sede."
+            elif "ESPADA" in tutor_seleccionado.upper() or "RODRIGO" in tutor_seleccionado.upper():
+                estrategia_ia = f"El aula registra la brecha más alta con S/ {monto_pendiente:,.2f} pendientes. Aplica el <b>efecto comunidad visual</b>: comparte activamente los diseños de los uniformes y apóyate en los alumnos líderes ya pagados para armar los equipos deportivos (estrategia FOMO)."
+            else:
+                estrategia_ia = f"Aborda a los alumnos rezagados de forma empática durante el control de asistencia. Enfatiza las Olimpiadas como un espacio de salud mental indispensable para liberar el estrés pre-examen."
+
+            st.markdown(f"""
+            <div class="ia-box animate-up" style="border-left-color: #FF9800; background: linear-gradient(135deg, #fffde7 0%, #fff9c4 100%); color: #e65100;">
+                <h4 style="margin:0 0 5px 0; font-weight:800; color:#e65100;">⚠️ Plan de Acción Académico - Tutoría</h4>
+                <p style="margin:0 0 8px 0; font-size:1rem; color:#333;">El salón registra un avance del <b>{avance}%</b>. Te falta incorporar a <b>{faltantes_insc} alumnos</b> para asegurar la cuota del aula.</p>
+                <p style="margin:0; font-size:0.95rem; color:#4e342e;">🚀 <b>Estrategia de Persuasión recomendada:</b> {estrategia_ia}</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        st.divider()
         col_graf1, col_graf2 = st.columns(2)
         
         with col_graf1:
@@ -272,17 +307,6 @@ elif menu == "🏆 Olimpiadas":
             fig_pie = px.pie(values=[datos_tutor["YAPE"], datos_tutor["EFECTIVO"]], names=["Yape", "Efectivo"], hole=0.5, title="Distribución de Pagos")
             st.plotly_chart(fig_pie, use_container_width=True)
             
-        # PERSONAJE INTERACTIVO DE SALUDO AL TUTOR
-        nombre_tutor_greet = tutor_seleccionado.split()[0].capitalize()
-        st.markdown(f"""
-        <div class="mascot-container animate-up">
-            <div class="mascot-avatar">👨‍🏫</div>
-            <div class="mascot-speech-bubble">
-                <h4 style="margin:0; color:#FF4B2B; font-weight:800;">¡Hola {nombre_tutor_greet}!</h4>
-                <p style="margin:5px 0 0 0; color:#333; font-size:1rem;">Tu salón está respondiendo activamente en esta campaña de las Olimpiadas 2026. ¡Sigue impulsando la recaudación para asegurar el primer puesto de la sede! 🚀</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with tab3:
@@ -338,7 +362,6 @@ elif menu == "🏆 Olimpiadas":
         df_control['Observación'] = df_control.apply(clean_status, axis=1)
         st.dataframe(df_control[['Tutor', 'Total Polos', 'Pagantes', 'Observación']], use_container_width=True, hide_index=True)
         
-        # 1. ACTUALIZADO: SE AGREGÓ LA COLUMNA 'PAGANTES' (TOTAL PAGADOS) ADENTRO DEL DESGLOSE DEL EXPANDER
         with st.expander("🔍 Ver desglose detallado por tallas (S, M, L, XL)"):
             st.dataframe(
                 df_control[['Tutor', 'S', 'M', 'L', 'XL', 'Total Polos', 'Pagantes']], 
@@ -483,7 +506,6 @@ elif menu == "🤖 Análisis Académico":
     st.dataframe(datos_ia[columnas_mostrar], use_container_width=True, hide_index=True)
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # 2. ACTUALIZADO: SE REDISEÑÓ EL CUADRO DE RECOMENDACIÓN CON UN SÚPER ASISTENTE VIRTUAL DE IA ROBOT ("🤖") INTERACTIVO
     nombre_tutor = str(tutor_ia).split()[0].capitalize()
     ultimo_examen = datos_ia.iloc[-1] if not datos_ia.empty else None
     cursos_bajos = f"{ultimo_examen['C+D']} y {ultimo_examen['CXM']}" if ultimo_examen is not None and 'C+D' in ultimo_examen else "Letras y Ciencias"
@@ -493,7 +515,7 @@ elif menu == "🤖 Análisis Académico":
         <div class="mascot-avatar">🤖</div>
         <div class="mascot-speech-bubble">
             <h3 style='color: #4CAF50; font-weight: 800; margin: 0 0 10px 0;'>💡 Recomendación Estratégica para UNMSM</h3>
-            <p style="margin:0; color:#333; font-size:1rem;">Hola <b>{nombre_tutor}</b>. Para asegurar el máximo ingreso de vacantes a la Universidad Nacional Mayor de San Marcos, es vital enfocar los repasos en el formato de preguntas de destreza cognitiva (DECO).</p>
+            <p style="margin:0; color:#333; font-size:1rem;">Hola <b>{nombre_tutor}</b>. Para asegurar el máximo ingreso de vacantes a la Universidad Nacional Mayor de San Marcos, es vital enfocar los repasos en preguntas de destreza cognitiva (DECO).</p>
             <p style="margin:8px 0 0 0; color:#333; font-size:1rem;">📊 Analizando el rendimiento histórico de tu aula, la mayor prioridad de reforzamiento está en los bloques de <b>{cursos_bajos}</b>.</p>
             <p style="margin:8px 0 0 0; font-style: italic; color:#666; font-size:0.95rem;">🚀 Acción inmediata: Ejecutar simulacros semanales cronometrados con control estricto de tiempos por sección para potenciar los puntajes de los muchachos. ¡Vamos por esos cachimbos!</p>
         </div>
