@@ -12,7 +12,7 @@ st.set_page_config(page_title="Dashboard Comas 2026", page_icon="🔥", layout="
 
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght=300;400;600;800&display=swap');
     
     html, body, [class*="css"] { font-family: 'Poppins', sans-serif; }
     
@@ -140,7 +140,7 @@ st.sidebar.title("Navegación Web")
 menu = st.sidebar.radio("", ("🏠 Inicio", "🏆 Olimpiadas", "⚠️ Morosidad", "🤖 Análisis Académico", "📈 Evaluación Bimensual"))
 
 # ==========================================
-# PÁGINA 1: INICIO (CARRUSEL EN VIVO)
+# PÁGINA 1: INICIO (CARRUSEL CONFIGURADO)
 # ==========================================
 if menu == "🏠 Inicio":
     st.balloons()
@@ -149,16 +149,18 @@ if menu == "🏠 Inicio":
     st.markdown('<div class="web-card">', unsafe_allow_html=True)
     st.subheader("📸 Galería Fotográfica de la Sede")
     
-    # NOTA: Si siguen sin cargar, usa links directos de ImgBB (.jpg) aquí:
-    LINK_FOTO_1 = "https://docs.google.com/uc?export=view&id=1Y9n4xlDrUS1yf5wlExwqUpsUuMrECmtR"
-    LINK_FOTO_2 = "https://docs.google.com/uc?export=view&id=1xx_WqMIvabKhGEzMqyBtBOUYwuOD0Yyj"
+    # ENLACES DE IMGBB REQUERIDOS
+    LINK_FOTO_1 = "https://ibb.co/tp7RCjhv"
+    LINK_FOTO_2 = "https://ibb.co/hJr5sMpd"
     
+    # Renderizar el carrusel animado
     st.markdown(f"""
         <div class="slider-wrapper">
             <img class="slide-img" src="{LINK_FOTO_1}">
             <img class="slide-img" src="{LINK_FOTO_2}">
         </div>
     """, unsafe_allow_html=True)
+    
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
@@ -173,7 +175,6 @@ elif menu == "🏆 Olimpiadas":
         st.markdown('<div class="web-card animate-up">', unsafe_allow_html=True)
         st.subheader("💰 Resumen Global e Ingresos de la Sede")
         
-        # CÁLCULOS DE METRICAS SOLICITADAS
         total_recaudado = df_olim['Recaudado'].sum()
         total_yape = df_olim['YAPE'].sum()
         total_efectivo = df_olim['EFECTIVO'].sum()
