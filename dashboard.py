@@ -140,7 +140,7 @@ st.sidebar.title("Navegación Web")
 menu = st.sidebar.radio("", ("🏠 Inicio", "🏆 Olimpiadas", "⚠️ Morosidad", "🤖 Análisis Académico", "📈 Evaluación Bimensual"))
 
 # ==========================================
-# PÁGINA 1: INICIO (CARRUSEL EN VIVO CORREGIDO)
+# PÁGINA 1: INICIO (CARRUSEL CONFIGURADO)
 # ==========================================
 if menu == "🏠 Inicio":
     st.balloons()
@@ -149,11 +149,11 @@ if menu == "🏠 Inicio":
     st.markdown('<div class="web-card">', unsafe_allow_html=True)
     st.subheader("📸 Galería Fotográfica de la Sede")
     
-    # ENLACES DIRECTOS VERIFICADOS USANDO SERVIDOR DE GOOGLE DOCS VIEW
-    LINK_FOTO_1 = "https://docs.google.com/uc?export=view&id=1xx_WqMIvabKhGEzMqyBtBOUYwuOD0Yyj"
-    LINK_FOTO_2 = "https://docs.google.com/uc?export=view&id=1Y9n4xlDrUS1yf5wlExwqUpsUuMrECmtR"
+    # ENLACES DIRECTOS EXTRAÍDOS DE TUS LINKS DE GOOGLE DRIVE
+    LINK_FOTO_1 = "https://docs.google.com/uc?export=view&id=1Y9n4xlDrUS1yf5wlExwqUpsUuMrECmtR"
+    LINK_FOTO_2 = "https://docs.google.com/uc?export=view&id=1xx_WqMIvabKhGEzMqyBtBOUYwuOD0Yyj"
     
-    # Renderizar el carrusel animado
+    # Renderizado del componente HTML animado en Streamlit
     st.markdown(f"""
         <div class="slider-wrapper">
             <img class="slide-img" src="{LINK_FOTO_1}">
