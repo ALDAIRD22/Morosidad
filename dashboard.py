@@ -146,8 +146,8 @@ if menu == "🏠 Inicio":
     st.markdown('<div class="animate-up"><p class="title-comas">SISTEMA WEB COMAS</p><p class="subtitle">🔥 LA MEJOR SEDE - LA NÚMERO 1 🔥</p></div>', unsafe_allow_html=True)
     st.markdown('<div class="web-card">', unsafe_allow_html=True)
     st.subheader("📸 Galería Fotográfica de la Sede")
-    LINK_FOTO_1 = "ttps://lh3.googleusercontent.com/d/1xx_WqMIvabKhGEzMqyBtBOUYwuOD0Yyj"
-    LINK_FOTO_2 = "https://lh3.googleusercontent.com/d/1Y9n4xlDrUS1yf5wlExwqUpsUuMrECmtRh"
+    LINK_FOTO_1 = "https://lh3.googleusercontent.com/d/1xx_WqMIvabKhGEzMqyBtBOUYwuOD0Yyj"
+    LINK_FOTO_2 = "https://lh3.googleusercontent.com/d/1Y9n4xlDrUS1yf5wlExwqUpsUuMrECmtR"
     st.markdown(f"""
         <div class="slider-wrapper">
             <img class="slide-img" src="{LINK_FOTO_1}">
